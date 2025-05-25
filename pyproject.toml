@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "django-keysmith"
+version = "0.1.0"
+description = "A django application for API key management with rest-framework"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { file = "LICENSE" }
+keywords = ["django", "keys", "management"]
+authors = [{ name = "thekodeking", email = "nkrishnaraj.developer@gmail.com" }]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 4.0",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = ["django>=4.0.0"]
+
+[project.urls]
+Homepage = "https://github.com/thekodeking/django-keysmith"
+Repository = "https://github.com/thekodeking/django-keysmith.git"
+Issues = "https://github.com/thekodeking/django-keysmith/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-django>=4.5.2",
+    "black>=22.3.0",
+    "isort>=5.10.1",
+    "flake8>=4.0.1",
+    "mypy>=0.941",
+]
+docs = ["sphinx>=4.4.0", "sphinx-rtd-theme>=1.0.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["keysmith"]
+
+[tool.hatch.build.targets.sdist]
+include = ["keysmith", "README.md"]
+
+[tool.black]
+line-length = 88
+target-version = ["py38"]
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[[tool.mypy.overrides]]
+module = "*.migrations.*"
+ignore_errors = true
