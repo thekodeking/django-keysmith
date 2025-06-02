@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Keysmith{% endblock %}</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            margin: 2rem auto;
+            max-width: 900px;
+            padding: 1rem;
+            color: #333;
+        }
+        header, nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        nav a {
+            margin-left: 1rem;
+            text-decoration: none;
+            color: #007acc;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            padding: 0.75rem;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+        th {
+            background: #f4f4f4;
+        }
+        form {
+            margin-top: 1rem;
+        }
+        .hint {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .status-revoked {
+            color: red;
+            font-weight: bold;
+        }
+        .status-active {
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🔐 Keysmith</h1>
+        <nav>
+            <a href="{% url 'keysmith:token_list' %}">Tokens</a>
+            <a href="{% url 'keysmith:token_create' %}">New Token</a>
+        </nav>
+    </header>
+    <hr>
+    {% block content %}{% endblock %}
+</body>
+</html>
