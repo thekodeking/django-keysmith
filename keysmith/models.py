@@ -16,33 +16,27 @@ class Token(models.Model):
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         on_delete=models.SET_NULL,
-        related_name="created_tokens"
+        related_name="created_tokens",
     )
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         on_delete=models.CASCADE,
-        related_name="api_tokens"
+        related_name="api_tokens",
     )
 
     token_type = models.CharField(
-        max_length=10,
-        choices=TokenType.choices,
-        default=TokenType.USER
+        max_length=10, choices=TokenType.choices, default=TokenType.USER
     )
 
-    scopes = models.ManyToManyField(
-        "auth.Permission",
-        blank=True
-    )
+    scopes = models.ManyToManyField("auth.Permission", blank=True)
 
-    key = models.CharField(
-        max_length=256,
-        unique=True
-    )
+    key = models.CharField(max_length=256, unique=True)
 
     prefix = models.CharField(max_length=12, db_index=True)
     hint = models.CharField(max_length=8)

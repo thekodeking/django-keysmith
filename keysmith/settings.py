@@ -1,23 +1,12 @@
 from django.conf import settings
 from django.core.signals import setting_changed
 
-# TODO: to plan out configuration for the package
 KEYSMITH_DEFAULTS = {
-    # ─────────────────────────────────────────────────────────────
-    # Token storage & hashing
-    # ─────────────────────────────────────────────────────────────
     "HASH_BACKEND": "keysmith.hashers.PBKDF2SHA512TokenHasher",
     "HASH_ITERATIONS": 100_000,
     "SALT_LENGTH": 16,
-    # ─────────────────────────────────────────────────────────────
-    # Expiry
-    # ─────────────────────────────────────────────────────────────
     "DEFAULT_EXPIRY_DAYS": 90,
-    "ROTATE_ON_USE": False,     # If True, tokens automatically rotate (re-hash) on each use
-    # ─────────────────────────────────────────────────────────────
-    # Scopes & Permissions
-    # ─────────────────────────────────────────────────────────────
-    # Allowed “scope” names (must map to your DRF permissions logic)
+    "ROTATE_ON_USE": False,  # If True, tokens automatically rotate (re-hash) on each use
     "AVAILABLE_SCOPES": [
         "read",
         "write",
@@ -25,22 +14,11 @@ KEYSMITH_DEFAULTS = {
         "audit",
     ],
     "DEFAULT_SCOPES": ["read"],
-    "PERMISSION_CLASS": "rest_framework.permissions.BasePermission",     # DRF Permission class to enforce scopes (must implement `.has_permission`)
-    # ─────────────────────────────────────────────────────────────
-    # Token modeling
-    # ─────────────────────────────────────────────────────────────
+    "PERMISSION_CLASS": "rest_framework.permissions.BasePermission",  # DRF Permission class to enforce scopes (must implement `.has_permission`)
     "TOKEN_MODEL": "keysmith.models.Token",
-    # ─────────────────────────────────────────────────────────────
-    # Transmission & retrieval
-    # ─────────────────────────────────────────────────────────────
-    # Header name where clients send their token
     "HEADER_NAME": "HTTP_X_KEYSMITH_TOKEN",
-    # Query-param fallback (e.g. ?token=…)
     "ALLOW_QUERY_PARAM": False,
     "QUERY_PARAM_NAME": "keysmith_token",
-    # ─────────────────────────────────────────────────────────────
-    # Auditing & logging
-    # ─────────────────────────────────────────────────────────────
     "ENABLE_AUDIT_LOGGING": True,
     "AUDIT_LOG_MODEL": "keysmith.models.TokenAuthLog",
 }
