@@ -25,7 +25,10 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = ["django>=4.0.0"]
+dependencies = [
+    "django>=4.0.0",
+    "djangorestframework>=3.15.2",
+]
 
 [project.urls]
 Homepage = "https://github.com/thekodeking/django-keysmith"
