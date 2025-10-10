@@ -4,6 +4,7 @@ from keysmith.hashers.base import BaseTokenHasher
 
 class PBKDF2SHA256TokenHasher(BaseTokenHasher):
     algorithm = "pbkdf2_sha256"
+    iterations = 100000
 
     def encode(self, key: str, salt: str, iterations: int) -> str:
         key_bytes = key.encode()
