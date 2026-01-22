@@ -4,7 +4,6 @@ from django.core.signals import setting_changed
 KEYSMITH_DEFAULTS = {
     "HASH_BACKEND": "keysmith.hashers.PBKDF2SHA512TokenHasher",
     "HASH_ITERATIONS": 100_000,
-    "SALT_LENGTH": 16,
     "DEFAULT_EXPIRY_DAYS": 90,
     "ROTATE_ON_USE": False,  # If True, tokens automatically rotate (re-hash) on each use
     "AVAILABLE_SCOPES": [
@@ -22,11 +21,7 @@ KEYSMITH_DEFAULTS = {
     "ENABLE_AUDIT_LOGGING": True,
     "AUDIT_LOG_MODEL": "keysmith.models.TokenAuthLog",
     "TOKEN_PREFIX": "tok_",
-    "TOKEN_LENGTH": 32,  # Length of the random value (excluding prefix and CRC)
-    "TOKEN_MIN_LENGTH": 16,  # Minimum allowed token length
-    "TOKEN_MAX_LENGTH": 64,  # Maximum allowed token length
-    "CRC_DIGITS": 6,  # Number of digits in CRC checksum
-    "HINT_LENGTH": 8,  # Number of characters to show as hint (last N chars)
+    "HINT_LENGTH": 8,
 }
 
 
