@@ -6,7 +6,7 @@ from typing import Iterable, Tuple
 from django.db import transaction
 from django.utils import timezone
 from django.utils.module_loading import import_string
-
+from keysmith.hashers.registry import get_hasher
 from keysmith.models import Token
 from keysmith.settings import keysmith_settings
 from keysmith.utils.tokens import (
@@ -16,14 +16,6 @@ from keysmith.utils.tokens import (
     build_hint,
 )
 from keysmith.hashers.base import BaseTokenHasher
-
-
-def _get_hasher() -> BaseTokenHasher:
-    """
-    Load and instantiate the configured token hasher.
-    """
-    hasher_cls = import_string(keysmith_settings.HASH_BACKEND)
-    return hasher_cls()
 
 
 def _default_expiry():
@@ -57,7 +49,7 @@ def create_token(
     expires_at=None,
     token_type: str = Token.TokenType.USER,
 ) -> Tuple[Token, str]:
-    hasher: BaseTokenHasher = _get_hasher()
+    hasher: BaseTokenHasher = get_hasher()
     secret: str = generate_raw_secret()
     full_prefix: str = _generate_unique_prefix()
 
@@ -92,7 +84,7 @@ def rotate_token(token: Token) -> str:
     if token.revoked or token.purged:
         raise ValueError("Cannot rotate a revoked or purged token")
 
-    hasher: BaseTokenHasher = _get_hasher()
+    hasher: BaseTokenHasher = get_hasher()
     secret: str = generate_raw_secret(keysmith_settings.TOKEN_LENGTH)
     namespace, identifier = token.prefix.rsplit("_", 1)
 
