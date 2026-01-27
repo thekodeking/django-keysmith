@@ -9,7 +9,7 @@ from .base import BaseTokenHasher
 
 class PBKDF2SHA512TokenHasher(BaseTokenHasher):
     """
-    PBKDF2-SHA512 hasher for Keysmith tokens.
+    PBKDF2-SHA512 hasher for keysmith tokens.
     """
 
     algorithm = "pbkdf2_sha512"
