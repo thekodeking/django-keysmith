@@ -1,7 +1,3 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [project]
 name = "django-keysmith"
 version = "0.1.0"
@@ -9,53 +5,61 @@ description = "A django application for API key management with rest-framework"
 readme = "README.md"
 requires-python = ">=3.8"
 license = { file = "LICENSE" }
-keywords = ["django", "keys", "management"]
 authors = [{ name = "thekodeking", email = "nkrishnaraj.developer@gmail.com" }]
+keywords = ["django", "keys", "management"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Environment :: Web Environment",
-    "Framework :: Django",
-    "Framework :: Django :: 4.0",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Topic :: Software Development :: Libraries :: Python Modules",
+  "Development Status :: 3 - Alpha",
+  "Environment :: Web Environment",
+  "Framework :: Django",
+  "Framework :: Django :: 4.0",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "django>=4.0.0",
-    "djangorestframework>=3.15.2",
+  "django>=4.0.0",
+  "djangorestframework>=3.15.2",
 ]
 
 [project.urls]
 Homepage = "https://github.com/thekodeking/django-keysmith"
-Repository = "https://github.com/thekodeking/django-keysmith.git"
 Issues = "https://github.com/thekodeking/django-keysmith/issues"
+Repository = "https://github.com/thekodeking/django-keysmith.git"
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "pytest-django>=4.5.2",
-    "black>=22.3.0",
-    "isort>=5.10.1",
-    "flake8>=4.0.1",
-    "mypy>=0.941",
-]
 docs = ["sphinx>=4.4.0", "sphinx-rtd-theme>=1.0.0"]
+
+[dependency-groups]
+dev = [
+  "black>=22.3.0",
+  "django-stubs>=5.1.3",
+  "djangorestframework-stubs>=3.15.1",
+  "flake8>=4.0.1",
+  "isort>=5.10.1",
+  "mypy>=0.941",
+  "pytest>=7.0.0",
+  "pytest-django>=4.5.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.black]
+line-length = 88
+target-version = ["py38"]
+include = '\.pyi?$'
 
 [tool.hatch.build.targets.wheel]
 packages = ["keysmith"]
 
 [tool.hatch.build.targets.sdist]
 include = ["keysmith", "README.md"]
-
-[tool.black]
-line-length = 88
-target-version = ["py38"]
-include = '\.pyi?$'
 
 [tool.isort]
 profile = "black"
