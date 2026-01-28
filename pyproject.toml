@@ -46,32 +46,38 @@ dev = [
   "pytest-django>=4.5.2",
 ]
 
+
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.9.27,<0.10.0"]
+build-backend = "uv_build"
 
-[tool.black]
+[tool.uv.build-backend]
+module-name = "keysmith"
+module-root = ""
+
+[tool.ruff]
+target-version = "py39"
 line-length = 88
-target-version = ["py38"]
-include = '\.pyi?$'
+fix = true
 
-[tool.hatch.build.targets.wheel]
-packages = ["keysmith"]
+select = [
+  "E",   
+  "F",  
+  "I", 
+  "UP",
+  "B",  
+  "SIM", 
+]
 
-[tool.hatch.build.targets.sdist]
-include = ["keysmith", "README.md"]
+ignore = [
+  "E501", 
+]
 
-[tool.isort]
-profile = "black"
-line_length = 88
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
 
-[tool.mypy]
-python_version = "3.8"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-
-[[tool.mypy.overrides]]
-module = "*.migrations.*"
-ignore_errors = true
+[tool.ruff.isort]
+known-first-party = ["keysmith"]
+combine-as-imports = true

@@ -38,7 +38,7 @@ format:
 check: lint test
 
 build:
-	uv run python -m build
+	uv build
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
