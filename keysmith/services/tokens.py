@@ -1,21 +1,20 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import timedelta
-from typing import Iterable, Tuple
 
 from django.db import transaction
 from django.utils import timezone
-from django.utils.module_loading import import_string
+
+from keysmith.hashers.base import BaseTokenHasher
 from keysmith.hashers.registry import get_hasher
 from keysmith.models import Token
 from keysmith.settings import keysmith_settings
 from keysmith.utils.tokens import (
     PublicToken,
-    generate_raw_secret,
     build_public_token,
-    build_hint,
+    generate_raw_secret,
 )
-from keysmith.hashers.base import BaseTokenHasher
 
 
 def _default_expiry():
@@ -48,7 +47,7 @@ def create_token(
     scopes: Iterable = None,
     expires_at=None,
     token_type: str = Token.TokenType.USER,
-) -> Tuple[Token, str]:
+) -> tuple[Token, str]:
     hasher: BaseTokenHasher = get_hasher()
     secret: str = generate_raw_secret()
     full_prefix: str = _generate_unique_prefix()

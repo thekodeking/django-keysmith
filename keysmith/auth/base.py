@@ -1,16 +1,15 @@
 from django.db import transaction
 
-from keysmith.models import Token
-from keysmith.hashers.base import BaseTokenHasher
-from keysmith.settings import keysmith_settings
-from keysmith.services.tokens import mark_token_used
-from keysmith.utils.tokens import extract_prefix_and_secret
 from keysmith.auth.exceptions import (
+    ExpiredToken,
     InvalidToken,
     RevokedToken,
-    ExpiredToken,
 )
+from keysmith.hashers.base import BaseTokenHasher
 from keysmith.hashers.registry import get_hasher
+from keysmith.models import Token
+from keysmith.services.tokens import mark_token_used
+from keysmith.utils.tokens import extract_prefix_and_secret
 
 
 @transaction.atomic
@@ -33,8 +32,8 @@ def authenticate_token(raw_token: str) -> Token:
 
     try:
         token = Token.objects.select_for_update().get(prefix=prefix)
-    except Token.DoesNotExist:
-        raise InvalidToken("Invalid token")
+    except Token.DoesNotExist as exc:
+        raise InvalidToken("Invalid token") from exc
 
     if token.revoked or token.purged:
         raise RevokedToken("Token has been revoked")

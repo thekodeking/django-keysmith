@@ -3,8 +3,6 @@ from __future__ import annotations
 import secrets
 import string
 import zlib
-from typing import Tuple
-from keysmith.settings import keysmith_settings
 from dataclasses import dataclass
 
 _DICTIONARY = string.ascii_letters + string.digits
@@ -56,7 +54,7 @@ def build_public_token(
     )
 
 
-def extract_prefix_and_secret(public_token: str) -> Tuple[str, str]:
+def extract_prefix_and_secret(public_token: str) -> tuple[str, str]:
     if not public_token:
         raise ValueError("Token is empty")
 
