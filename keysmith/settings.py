@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.core.signals import setting_changed
+from django.utils.translation import gettext_lazy as _
 
 KEYSMITH_DEFAULTS = {
     "HASH_BACKEND": "keysmith.hashers.PBKDF2SHA512TokenHasher",
@@ -22,6 +23,11 @@ KEYSMITH_DEFAULTS = {
     "AUDIT_LOG_MODEL": "keysmith.models.TokenAuthLog",
     "TOKEN_PREFIX": "tok_",
     "HINT_LENGTH": 8,
+    "DEFAULT_ERROR_MESSAGES": {
+        "missing_token": _("Authentication credentials were not provided."),
+        "invalid_token": _("Your session has expired or the token is invalid."),
+        "insufficient_scope": _("You do not have permission to perform this action."),
+    },
 }
 
 
