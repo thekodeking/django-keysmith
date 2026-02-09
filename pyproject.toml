@@ -22,7 +22,6 @@ classifiers = [
 ]
 dependencies = [
   "django>=4.0.0",
-  "djangorestframework>=3.15.2",
 ]
 
 [project.urls]
@@ -31,6 +30,7 @@ Issues = "https://github.com/thekodeking/django-keysmith/issues"
 Repository = "https://github.com/thekodeking/django-keysmith.git"
 
 [project.optional-dependencies]
+drf = ["djangorestframework>=3.15.2"]
 docs = ["sphinx>=4.4.0", "sphinx-rtd-theme>=1.0.0"]
 
 [dependency-groups]
