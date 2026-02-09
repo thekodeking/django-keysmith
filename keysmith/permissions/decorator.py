@@ -28,7 +28,13 @@ def keysmith_scopes(*required_scopes: str) -> Callable:
             if not token:
                 return HttpResponseUnauthorized(get_message("missing_token"))
 
-            token_scopes = set(getattr(token, "scopes", []))
+            token_scopes_field = getattr(token, "scopes", None)
+            if hasattr(token_scopes_field, "values_list"):
+                token_scopes = set(
+                    token_scopes_field.values_list("codename", flat=True)
+                )
+            else:
+                token_scopes = set(token_scopes_field or [])
             missing = required - token_scopes
 
             if missing:
