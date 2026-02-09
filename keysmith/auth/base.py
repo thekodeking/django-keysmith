@@ -7,13 +7,13 @@ from keysmith.auth.exceptions import (
 )
 from keysmith.hashers.base import BaseTokenHasher
 from keysmith.hashers.registry import get_hasher
-from keysmith.models import Token
+from keysmith.models.utils import get_token_model
 from keysmith.services.tokens import mark_token_used
 from keysmith.utils.tokens import extract_prefix_and_secret
 
 
 @transaction.atomic
-def authenticate_token(raw_token: str) -> Token:
+def authenticate_token(raw_token: str):
     """
     Authenticate a public token string and return the Token instance.
 
@@ -31,6 +31,7 @@ def authenticate_token(raw_token: str) -> Token:
         raise InvalidToken(str(exc)) from exc
 
     try:
+        Token = get_token_model()
         token = Token.objects.select_for_update().get(prefix=prefix)
     except Token.DoesNotExist as exc:
         raise InvalidToken("Invalid token") from exc

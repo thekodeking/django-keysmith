@@ -14,19 +14,23 @@ KEYSMITH_DEFAULTS = {
         "audit",
     ],
     "DEFAULT_SCOPES": ["read"],
-    "PERMISSION_CLASS": "rest_framework.permissions.BasePermission",  # DRF Permission class to enforce scopes (must implement `.has_permission`)
-    "TOKEN_MODEL": "keysmith.models.Token",
+    "PERMISSION_CLASS": None,  # Optional DRF permission class path (must implement `.has_permission`)
+    "TOKEN_MODEL": "keysmith.Token",
     "HEADER_NAME": "HTTP_X_KEYSMITH_TOKEN",
     "ALLOW_QUERY_PARAM": False,
     "QUERY_PARAM_NAME": "keysmith_token",
     "ENABLE_AUDIT_LOGGING": True,
-    "AUDIT_LOG_MODEL": "keysmith.models.TokenAuthLog",
+    "AUDIT_LOG_MODEL": "keysmith.TokenAuditLog",
     "TOKEN_PREFIX": "tok_",
+    "TOKEN_SECRET_LENGTH": 32,
     "HINT_LENGTH": 8,
+    "RATE_LIMIT_HOOK": None,  # Optional dotted callable: hook(request, raw_token=None)
+    "DRF_THROTTLE_HOOK": None,  # Optional dotted callable: hook(request, token=None)
     "DEFAULT_ERROR_MESSAGES": {
         "missing_token": _("Authentication credentials were not provided."),
         "invalid_token": _("Your session has expired or the token is invalid."),
         "insufficient_scope": _("You do not have permission to perform this action."),
+        "rate_limited": _("Too many authentication attempts. Try again later."),
     },
 }
 
@@ -45,7 +49,12 @@ class KeysmithSettings:
         if attr not in KEYSMITH_DEFAULTS:
             raise AttributeError(f"Invalid Keysmith setting: {attr!r}")
 
-        val = self.user_settings.get(attr, KEYSMITH_DEFAULTS[attr])
+        if attr == "DEFAULT_ERROR_MESSAGES":
+            default_messages = KEYSMITH_DEFAULTS[attr]
+            user_messages = self.user_settings.get(attr, {})
+            val = {**default_messages, **user_messages}
+        else:
+            val = self.user_settings.get(attr, KEYSMITH_DEFAULTS[attr])
 
         setattr(self, attr, val)
         self._cached_attrs.add(attr)
