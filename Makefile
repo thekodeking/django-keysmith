@@ -2,6 +2,7 @@ PYTHON := uv run python
 PIP    := uv pip
 
 PACKAGE := keysmith
+DJANGO_MANAGE := uv run --active python dev/manage.py
 
 .DEFAULT_GOAL := help
 
@@ -17,6 +18,9 @@ help:
 	@echo "make check          Lint + tests"
 	@echo "make clean          Remove caches/build artifacts"
 	@echo "make build          Build package"
+	@echo "make makemigrations Generate migrations for keysmith app"
+	@echo "make migration-check Ensure model changes are captured in migrations"
+	@echo "make migrate-dev    Apply migrations in local dev DB"
 	@echo ""
 
 setup:
@@ -39,6 +43,15 @@ check: lint test
 
 build:
 	uv build
+
+makemigrations:
+	$(DJANGO_MANAGE) makemigrations keysmith
+
+migration-check:
+	$(DJANGO_MANAGE) makemigrations --check --dry-run keysmith
+
+migrate-dev:
+	$(DJANGO_MANAGE) migrate
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
