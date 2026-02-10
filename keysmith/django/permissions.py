@@ -4,7 +4,7 @@ from typing import Callable
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponse
 
-from keysmith.auth.http import HttpResponseUnauthorized
+from keysmith.django.http import HttpResponseUnauthorized
 from keysmith.auth.utils import get_message
 
 

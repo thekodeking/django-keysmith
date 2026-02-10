@@ -56,3 +56,6 @@ class KeysmithAuthentication(BaseAuthentication):
             status_code=200,
         )
         return (token.user, token)
+
+
+__all__ = ["KeysmithAuthentication"]

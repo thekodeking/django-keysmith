@@ -90,9 +90,6 @@ class AbstractToken(models.Model):
         return f"{self.name} ({self.token_type})"
 
 
-from django.db import models
-
-
 class AbstractTokenAuditLog(models.Model):
     """
     Contract for token audit logging.

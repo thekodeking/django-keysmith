@@ -3,7 +3,7 @@ from typing import Callable
 
 from django.http import HttpRequest, HttpResponse
 
-from keysmith.auth.http import HttpResponseUnauthorized
+from keysmith.django.http import HttpResponseUnauthorized
 from keysmith.auth.utils import get_message
 
 

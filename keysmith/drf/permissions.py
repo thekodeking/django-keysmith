@@ -40,3 +40,6 @@ class HasKeysmithScopes(BasePermission):
 class ScopedPermission(HasKeysmithScopes):
     def __init__(self, *scopes: str):
         self.required_scopes = set(scopes)
+
+
+__all__ = ["HasKeysmithScopes", "ScopedPermission"]
