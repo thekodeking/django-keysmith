@@ -22,6 +22,10 @@ class KeysmithAuthentication(BaseAuthentication):
     """
 
     def authenticate(self, request):
+        # Prevent duplicate audit records when middleware is also enabled.
+        if hasattr(request, "_request"):
+            request._request._keysmith_skip_middleware_audit = True
+
         header_name = keysmith_settings.HEADER_NAME.replace("HTTP_", "").replace("_", "-")
         raw = request.headers.get(header_name)
         if not raw:

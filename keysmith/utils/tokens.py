@@ -5,6 +5,8 @@ import string
 import zlib
 from dataclasses import dataclass
 
+from keysmith.settings import keysmith_settings
+
 _DICTIONARY = string.ascii_letters + string.digits
 
 
@@ -44,7 +46,7 @@ def build_public_token(
     crc = compute_crc(body)
 
     public = f"{body}{crc}"
-    hint = build_hint(full_prefix=full_prefix, crc=crc)
+    hint = build_hint(crc=crc)
 
     return PublicToken(
         token=public,
@@ -85,16 +87,19 @@ def extract_prefix_and_secret(public_token: str) -> tuple[str, str]:
     return prefix_and_id, secret
 
 
-def build_hint(*, full_prefix: str, crc: str) -> str:
+def build_hint(*, crc: str) -> str:
     """
-    Build a non-sensitive human-readable hint.
+    Build a short, non-sensitive hint that does not repeat prefix/token id.
 
     Format:
-        <prefix>_<id>…<last N crc digits>
+        h_<last N crc digits>
+
+    Length is bounded by KEYSMITH["HINT_LENGTH"] and model constraints.
     """
-    if not full_prefix or not crc:
+    if not crc:
         return ""
 
-    crc_length: int = 6
-    crc_tail_len = max(1, crc_length // 2)
-    return f"{full_prefix}…{crc[-crc_tail_len:]}"
+    max_len = max(2, int(getattr(keysmith_settings, "HINT_LENGTH", 8) or 8))
+    marker = "h_"
+    tail_len = max(1, max_len - len(marker))
+    return f"{marker}{crc[-tail_len:]}"

@@ -3,8 +3,8 @@ from typing import Callable
 
 from django.http import HttpRequest, HttpResponse
 
-from keysmith.django.http import HttpResponseUnauthorized
 from keysmith.auth.utils import get_message
+from keysmith.django.http import HttpResponseUnauthorized
 
 
 def keysmith_required(
@@ -17,6 +17,10 @@ def keysmith_required(
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapped(request: HttpRequest, *args, **kwargs) -> HttpResponse:
+            # Used by middleware to log missing-token auth failures only when a view
+            # explicitly requires token authentication.
+            request._keysmith_auth_required = not allow_anonymous
+
             if getattr(request, "keysmith_user", None):
                 return func(request, *args, **kwargs)
 

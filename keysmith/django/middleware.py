@@ -41,8 +41,21 @@ class KeysmithAuthenticationMiddleware(MiddlewareMixin):
         }
 
     def process_response(self, request, response):
+        if getattr(request, "_keysmith_skip_middleware_audit", False):
+            return response
+
         state = getattr(request, "_keysmith_audit_state", None)
         if not state:
+            if (
+                getattr(request, "_keysmith_auth_required", False)
+                and not getattr(request, "keysmith_token", None)
+            ):
+                log_audit_event(
+                    action="auth_failed",
+                    request=request,
+                    status_code=response.status_code,
+                    extra={"error_code": "missing_token"},
+                )
             return response
 
         if state["success"]:
