@@ -21,7 +21,7 @@ KEYSMITH_DEFAULTS = {
     "QUERY_PARAM_NAME": "keysmith_token",
     "ENABLE_AUDIT_LOGGING": True,
     "AUDIT_LOG_MODEL": "keysmith.TokenAuditLog",
-    "TOKEN_PREFIX": "tok_",
+    "TOKEN_PREFIX": "tok",
     "TOKEN_SECRET_LENGTH": 32,
     "HINT_LENGTH": 8,
     "RATE_LIMIT_HOOK": None,  # Optional dotted callable: hook(request, raw_token=None)
