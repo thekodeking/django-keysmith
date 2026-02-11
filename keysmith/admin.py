@@ -161,7 +161,10 @@ class TokenAdmin(admin.ModelAdmin):
         raw_token = request.session.pop(session_key, None)
 
         if not raw_token:
-            messages.warning(request, "The token value is only shown once and is no longer available.")
+            messages.warning(
+                request,
+                "The token value is only shown once and is no longer available.",
+            )
             change_url = reverse(
                 "admin:keysmith_token_change",
                 args=[token.pk],

@@ -1,10 +1,10 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from keysmith.drf.permissions import RequireKeysmithToken
 from tokenlab.models import Note
 from tokenlab.serializers import NoteSerializer
+
+from keysmith.drf.permissions import RequireKeysmithToken
 
 
 class TokenStatusAPIView(APIView):

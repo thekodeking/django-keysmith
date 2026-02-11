@@ -1,5 +1,4 @@
 from django.urls import path
-
 from tokenlab import plain_views
 
 urlpatterns = [

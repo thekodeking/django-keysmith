@@ -1,5 +1,4 @@
 from django.contrib import admin
-
 from tokenlab.models import Note
 
 

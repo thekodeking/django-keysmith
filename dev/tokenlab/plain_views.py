@@ -2,9 +2,9 @@ import json
 
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from tokenlab.models import Note
 
 from keysmith.django.decorator import keysmith_required
-from tokenlab.models import Note
 
 
 def _json_body(request: HttpRequest) -> dict:
@@ -37,9 +37,7 @@ def token_status(request: HttpRequest) -> JsonResponse:
 @csrf_exempt
 def notes_collection(request: HttpRequest) -> JsonResponse:
     if request.method == "GET":
-        notes = list(
-            Note.objects.values("id", "title", "content", "created_at", "updated_at")
-        )
+        notes = list(Note.objects.values("id", "title", "content", "created_at", "updated_at"))
         return JsonResponse({"items": notes})
 
     if request.method == "POST":

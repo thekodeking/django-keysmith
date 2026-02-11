@@ -25,16 +25,12 @@ def keysmith_required(
                 return func(request, *args, **kwargs)
 
             if getattr(request, "keysmith_auth_error", None):
-                return HttpResponseUnauthorized(
-                    invalid_message or get_message("invalid_token")
-                )
+                return HttpResponseUnauthorized(invalid_message or get_message("invalid_token"))
 
             if allow_anonymous:
                 return func(request, *args, **kwargs)
 
-            return HttpResponseUnauthorized(
-                missing_message or get_message("missing_token")
-            )
+            return HttpResponseUnauthorized(missing_message or get_message("missing_token"))
 
         return wrapped
 

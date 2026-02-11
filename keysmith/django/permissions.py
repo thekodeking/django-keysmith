@@ -4,8 +4,8 @@ from typing import Callable
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponse
 
-from keysmith.django.http import HttpResponseUnauthorized
 from keysmith.auth.utils import get_message
+from keysmith.django.http import HttpResponseUnauthorized
 
 
 def keysmith_scopes(*required_scopes: str) -> Callable:
@@ -30,9 +30,7 @@ def keysmith_scopes(*required_scopes: str) -> Callable:
 
             token_scopes_field = getattr(token, "scopes", None)
             if hasattr(token_scopes_field, "values_list"):
-                token_scopes = set(
-                    token_scopes_field.values_list("codename", flat=True)
-                )
+                token_scopes = set(token_scopes_field.values_list("codename", flat=True))
             else:
                 token_scopes = set(token_scopes_field or [])
             missing = required - token_scopes

@@ -46,9 +46,8 @@ class KeysmithAuthenticationMiddleware(MiddlewareMixin):
 
         state = getattr(request, "_keysmith_audit_state", None)
         if not state:
-            if (
-                getattr(request, "_keysmith_auth_required", False)
-                and not getattr(request, "keysmith_token", None)
+            if getattr(request, "_keysmith_auth_required", False) and not getattr(
+                request, "keysmith_token", None
             ):
                 log_audit_event(
                     action="auth_failed",
