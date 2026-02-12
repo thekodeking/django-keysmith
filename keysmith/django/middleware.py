@@ -1,5 +1,3 @@
-from django.utils.deprecation import MiddlewareMixin
-
 from keysmith.audit.logger import log_audit_event
 from keysmith.auth.base import authenticate_token
 from keysmith.auth.exceptions import TokenAuthError
@@ -7,40 +5,40 @@ from keysmith.hooks import load_hook
 from keysmith.settings import keysmith_settings
 
 
-class KeysmithAuthenticationMiddleware(MiddlewareMixin):
-    def process_request(self, request):
+class KeysmithAuthenticationMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
         request.keysmith_token = None
         request.keysmith_user = None
         request.keysmith_auth_error = None
         request._keysmith_audit_state = None
 
         raw_token = self._get_raw_token(request)
-        if not raw_token:
-            return
+        if raw_token:
+            try:
+                rate_limit_hook = load_hook("RATE_LIMIT_HOOK")
+                if rate_limit_hook is not None:
+                    rate_limit_hook(request=request, raw_token=raw_token)
 
-        try:
-            rate_limit_hook = load_hook("RATE_LIMIT_HOOK")
-            if rate_limit_hook is not None:
-                rate_limit_hook(request=request, raw_token=raw_token)
+                token = authenticate_token(raw_token)
+            except TokenAuthError as exc:
+                request.keysmith_auth_error = exc
+                request._keysmith_audit_state = {
+                    "success": False,
+                    "error_code": exc.__class__.__name__.lower(),
+                }
+            else:
+                request.keysmith_token = token
+                request.keysmith_user = token.user
+                request._keysmith_audit_state = {
+                    "success": True,
+                    "token": token,
+                }
 
-            token = authenticate_token(raw_token)
-        except TokenAuthError as exc:
-            request.keysmith_auth_error = exc
-            request._keysmith_audit_state = {
-                "success": False,
-                "error_code": exc.__class__.__name__.lower(),
-            }
+        response = self.get_response(request)
 
-            return
-
-        request.keysmith_token = token
-        request.keysmith_user = token.user
-        request._keysmith_audit_state = {
-            "success": True,
-            "token": token,
-        }
-
-    def process_response(self, request, response):
         if getattr(request, "_keysmith_skip_middleware_audit", False):
             return response
 

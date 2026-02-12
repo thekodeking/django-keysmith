@@ -17,7 +17,7 @@ def keysmith_required(
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapped(request: HttpRequest, *args, **kwargs) -> HttpResponse:
-            # Used by middleware to log missing-token auth failures only when a view
+            # used by middleware to log missing-token auth failures only when a view
             # explicitly requires token authentication.
             request._keysmith_auth_required = not allow_anonymous
 

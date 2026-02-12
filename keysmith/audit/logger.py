@@ -62,5 +62,5 @@ def log_audit_event(
             extra=extra or {},
         )
     except Exception:
-        # Audit logging must never interrupt auth.
+        # audit logging must never interrupt auth.
         logger.exception("Failed to write Keysmith audit log entry")
