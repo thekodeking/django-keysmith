@@ -36,6 +36,8 @@ KEYSMITH_DEFAULTS = {
 
 
 class KeysmithSettings:
+    """Lazy proxy around the `KEYSMITH` Django setting."""
+
     def __init__(self, user_settings=None):
         if user_settings is not None:
             self._user_settings = user_settings

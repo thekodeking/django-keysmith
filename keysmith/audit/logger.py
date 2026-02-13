@@ -35,6 +35,7 @@ def log_audit_event(
     status_code: int = 0,
     extra: dict[str, Any] | None = None,
 ) -> None:
+    """Write an audit row if enabled, swallowing failures to avoid auth disruption."""
     if not keysmith_settings.ENABLE_AUDIT_LOGGING:
         return
 

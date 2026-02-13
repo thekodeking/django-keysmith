@@ -14,6 +14,7 @@ def keysmith_required(
     missing_message: str | None = None,
     invalid_message: str | None = None,
 ) -> Callable:
+    """Protect a Django view with Keysmith auth, with optional anonymous fallback."""
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapped(request: HttpRequest, *args, **kwargs) -> HttpResponse:

@@ -1,7 +1,9 @@
 import os
+from importlib.util import find_spec
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
+HAS_DRF = find_spec("rest_framework") is not None
 
 SECRET_KEY = "dev-only-not-for-production"
 DEBUG = True
@@ -14,10 +16,11 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "rest_framework",
     "keysmith",
     "tokenlab",
 ]
+if HAS_DRF:
+    INSTALLED_APPS.append("rest_framework")
 
 MIDDLEWARE: list[str] = [
     "django.middleware.security.SecurityMiddleware",
@@ -146,14 +149,16 @@ USE_I18N = True
 USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 STATIC_URL = "static/"
-STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+STATICFILES_DIRS = [STATIC_DIR] if os.path.isdir(STATIC_DIR) else []
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "keysmith.drf.auth.KeysmithAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
-}
+if HAS_DRF:
+    REST_FRAMEWORK = {
+        "DEFAULT_AUTHENTICATION_CLASSES": [
+            "keysmith.drf.auth.KeysmithAuthentication",
+        ],
+        "DEFAULT_PERMISSION_CLASSES": [
+            "rest_framework.permissions.IsAuthenticated",
+        ],
+    }

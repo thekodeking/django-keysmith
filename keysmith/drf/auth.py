@@ -17,9 +17,7 @@ from keysmith.settings import keysmith_settings
 
 
 class KeysmithAuthentication(BaseAuthentication):
-    """
-    DRF authentication backend for Keysmith tokens.
-    """
+    """Authenticate DRF requests using Keysmith tokens from configured header."""
 
     def authenticate(self, request):
         # Prevent duplicate audit records when middleware is also enabled.

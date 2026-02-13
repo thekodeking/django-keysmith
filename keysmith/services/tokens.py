@@ -50,6 +50,7 @@ def create_token(
     expires_at=None,
     token_type: str | None = None,
 ):
+    """Create and persist a new token, returning `(token, raw_public_token)`."""
     Token = get_token_model()
     if token_type is None:
         token_type = Token.TokenType.USER
@@ -85,6 +86,7 @@ def create_token(
 
 @transaction.atomic
 def rotate_token(token, *, request=None, actor=None) -> str:
+    """Rotate a token secret/hash and emit an audit entry."""
     if token.revoked or token.purged:
         raise ValueError("Cannot rotate a revoked or purged token")
 
@@ -115,6 +117,7 @@ def rotate_token(token, *, request=None, actor=None) -> str:
 
 @transaction.atomic
 def revoke_token(token, *, purge: bool = False, request=None, actor=None) -> None:
+    """Revoke (and optionally purge) a token and log the lifecycle event."""
     updates = {}
 
     if not token.revoked:

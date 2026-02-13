@@ -5,6 +5,7 @@ from keysmith.models.utils import get_audit_log_model, get_token_model
 
 @register()
 def keysmith_model_contract_checks(app_configs, **kwargs):
+    """Ensure configured token and audit models expose required fields/methods."""
     errors = []
     token_model = get_token_model()
     audit_model = get_audit_log_model()

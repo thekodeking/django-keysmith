@@ -41,6 +41,7 @@ def build_public_token(
     identifier: str,
     secret: str,
 ) -> PublicToken:
+    """Build the externally visible token plus derived, non-sensitive metadata."""
     full_prefix = f"{namespace}_{identifier}"
     body = f"{full_prefix}:{secret}"
     crc = compute_crc(body)
@@ -57,6 +58,7 @@ def build_public_token(
 
 
 def extract_prefix_and_secret(public_token: str) -> tuple[str, str]:
+    """Validate a public token and return `(prefix, secret)`."""
     if not public_token:
         raise ValueError("Token is empty")
 

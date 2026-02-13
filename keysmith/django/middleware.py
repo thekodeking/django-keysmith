@@ -6,6 +6,8 @@ from keysmith.settings import keysmith_settings
 
 
 class KeysmithAuthenticationMiddleware:
+    """Attach Keysmith auth context to each request and emit audit events."""
+
     def __init__(self, get_response):
         self.get_response = get_response
 

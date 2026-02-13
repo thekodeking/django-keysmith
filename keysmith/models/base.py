@@ -8,6 +8,8 @@ from django.utils import timezone
 
 
 class AbstractToken(models.Model):
+    """Abstract contract for token models used by Keysmith auth services."""
+
     class TokenType(models.TextChoices):
         USER = "user", "User"
         SYSTEM = "system", "System"
