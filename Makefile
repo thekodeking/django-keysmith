@@ -2,7 +2,7 @@ PYTHON := uv run python
 PIP    := uv pip
 
 PACKAGE := keysmith
-DJANGO_MANAGE := uv run --active python dev/manage.py
+DJANGO_TEST_MANAGE := uv run python tests/manage.py
 
 .DEFAULT_GOAL := help
 
@@ -20,7 +20,9 @@ help:
 	@echo "make build          Build package"
 	@echo "make makemigrations Generate migrations for keysmith app"
 	@echo "make migration-check Ensure model changes are captured in migrations"
-	@echo "make migrate-dev    Apply migrations in local dev DB"
+	@echo "make migrate        Apply migrations using test settings"
+	@echo "make docs-serve     Serve docs locally with zensical"
+	@echo "make docs-build     Build docs site with zensical"
 	@echo ""
 
 setup:
@@ -31,7 +33,7 @@ sync:
 	uv sync --dev
 
 test:
-	uv run pytest
+	uv run python runtests.py
 
 lint:
 	uv run ruff check $(PACKAGE)
@@ -45,13 +47,19 @@ build:
 	uv build
 
 makemigrations:
-	$(DJANGO_MANAGE) makemigrations keysmith
+	$(DJANGO_TEST_MANAGE) makemigrations keysmith
 
 migration-check:
-	$(DJANGO_MANAGE) makemigrations --check --dry-run keysmith
+	$(DJANGO_TEST_MANAGE) makemigrations --check --dry-run keysmith
 
-migrate-dev:
-	$(DJANGO_MANAGE) migrate
+migrate:
+	$(DJANGO_TEST_MANAGE) migrate
+
+docs-serve:
+	uv run --extra docs zensical serve
+
+docs-build:
+	uv run --extra docs zensical build
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
