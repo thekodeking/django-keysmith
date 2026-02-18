@@ -20,9 +20,7 @@ def authenticate_token(raw_token: str):
     and secret hash. On success it updates `last_used_at`.
     """
     if not raw_token:
-        raise InvalidToken(
-            "No token provided. Please include a valid authentication token."
-        )
+        raise InvalidToken("No token provided. Please include a valid authentication token.")
 
     try:
         prefix, secret = extract_prefix_and_secret(raw_token)
@@ -36,8 +34,7 @@ def authenticate_token(raw_token: str):
         token = Token.objects.select_for_update().get(prefix=prefix)
     except Token.DoesNotExist as exc:
         raise InvalidToken(
-            "This token doesn't exist or has been deleted. "
-            "Please request a new token."
+            "This token doesn't exist or has been deleted. Please request a new token."
         ) from exc
 
     if token.revoked or token.purged:
@@ -48,8 +45,7 @@ def authenticate_token(raw_token: str):
 
     if token.is_expired:
         raise ExpiredToken(
-            f"This token expired on {token.expires_at}. "
-            "Please request a new token to continue."
+            f"This token expired on {token.expires_at}. Please request a new token to continue."
         )
 
     hasher: BaseTokenHasher = get_hasher()
