@@ -1,0 +1,11 @@
+[run]
+source =
+    keysmith
+omit =
+    tests/*
+    */tests/*
+
+[report]
+omit =
+    tests/*
+    */tests/*
