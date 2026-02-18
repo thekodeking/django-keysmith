@@ -27,11 +27,12 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/thekodeking/django-keysmith"
 Issues = "https://github.com/thekodeking/django-keysmith/issues"
-Repository = "https://github.com/thekodeking/django-keysmith.git"
+Repository = "https://github.com/thekodeking/django-keysmith"
+Documentation = "https://github.com/thekodeking/django-keysmith/tree/main/docs"
 
 [project.optional-dependencies]
 drf = ["djangorestframework>=3.15.2"]
-docs = ["sphinx>=4.4.0", "sphinx-rtd-theme>=1.0.0"]
+docs = ["zensical"]
 
 [dependency-groups]
 dev = [
