@@ -1,13 +1,13 @@
 import json
 
 import pytest
-from django.http import HttpRequest, JsonResponse
-from django.test import Client, RequestFactory
+from django.http import JsonResponse
+from django.test import RequestFactory
 
 from keysmith.django.decorator import keysmith_required
 from keysmith.django.middleware import KeysmithAuthenticationMiddleware
 from keysmith.django.permissions import keysmith_scopes
-from keysmith.services.tokens import create_token, revoke_token
+from keysmith.services.tokens import create_token
 
 
 @pytest.mark.django_db
@@ -245,8 +245,6 @@ class TestPlainDjangoViews:
         """GET /api/resources/ returns list of resources."""
         from django.contrib.auth import get_user_model
 
-        from tests.models import TestResource
-
         User = get_user_model()
         user = User.objects.create_user(username="testuser")
 
@@ -277,8 +275,6 @@ class TestPlainDjangoViews:
     def test_resource_collection_post_creates_resource(self):
         """POST /api/resources/ creates a new resource."""
         from django.contrib.auth import get_user_model
-
-        from tests.models import TestResource
 
         User = get_user_model()
         user = User.objects.create_user(username="testuser")
@@ -315,8 +311,6 @@ class TestPlainDjangoViews:
     def test_resource_collection_post_requires_name(self):
         """POST /api/resources/ requires name field."""
         from django.contrib.auth import get_user_model
-
-        from tests.models import TestResource
 
         User = get_user_model()
         user = User.objects.create_user(username="testuser")
@@ -457,8 +451,6 @@ class TestPlainDjangoViews:
     def test_resource_detail_not_found(self):
         """Accessing non-existent resource returns 404."""
         from django.contrib.auth import get_user_model
-
-        from tests.models import TestResource
 
         User = get_user_model()
         user = User.objects.create_user(username="testuser")

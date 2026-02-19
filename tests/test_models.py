@@ -135,7 +135,7 @@ class TestTokenModel:
         token1, _ = create_token(name="token-1")
 
         with pytest.raises(IntegrityError):
-            token2 = Token.objects.create(
+            Token.objects.create(
                 name="token-2",
                 key=token1.key,
                 prefix="tok_unique2",
