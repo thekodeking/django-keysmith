@@ -1,11 +1,8 @@
-"""DRF views for testing Keysmith authentication."""
-
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from keysmith.drf.permissions import HasKeysmithScopes, RequireKeysmithToken
-
 from tests.models import TestResource
 
 

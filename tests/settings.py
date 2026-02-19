@@ -1,5 +1,3 @@
-"""Django settings for Keysmith test suite."""
-
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -72,7 +70,6 @@ KEYSMITH = {
     "HINT_LENGTH": 8,
 }
 
-# Try to add DRF if available
 try:
     import rest_framework
 

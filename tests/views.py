@@ -1,5 +1,3 @@
-"""Plain Django views for testing Keysmith authentication."""
-
 import json
 
 from django.http import HttpRequest, JsonResponse
@@ -7,7 +5,6 @@ from django.views.decorators.csrf import csrf_exempt
 
 from keysmith.django.decorator import keysmith_required
 from keysmith.django.permissions import keysmith_scopes
-
 from tests.models import TestResource
 
 

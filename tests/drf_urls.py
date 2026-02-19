@@ -1,5 +1,3 @@
-"""DRF URL configuration for Keysmith test suite."""
-
 from django.urls import path
 
 from tests import drf_views

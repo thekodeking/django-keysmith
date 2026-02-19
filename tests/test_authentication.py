@@ -1,5 +1,3 @@
-"""Tests for Keysmith authentication flows."""
-
 from datetime import timedelta
 
 import pytest

@@ -1,5 +1,3 @@
-"""Tests for Keysmith hashers."""
-
 import pytest
 
 from keysmith.hashers.base import BaseTokenHasher

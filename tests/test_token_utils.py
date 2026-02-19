@@ -1,5 +1,3 @@
-"""Tests for Keysmith token utilities."""
-
 import re
 import secrets
 from unittest.mock import patch

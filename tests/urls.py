@@ -1,5 +1,3 @@
-"""URL configuration for Keysmith test suite."""
-
 from importlib.util import find_spec
 
 from django.contrib import admin

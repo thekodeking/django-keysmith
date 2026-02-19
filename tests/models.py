@@ -1,5 +1,3 @@
-"""Test models for Keysmith test suite."""
-
 from django.db import models
 
 

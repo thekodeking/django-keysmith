@@ -1,5 +1,3 @@
-"""Tests for Keysmith audit logging."""
-
 from unittest.mock import Mock, patch
 
 import pytest
@@ -18,7 +16,6 @@ class TestAuditLogging:
         """Audit logs can be created for token lifecycle events."""
         token, _ = create_token(name="test-token")
 
-        # Manually create audit log (create_token doesn't log by default)
         log_audit_event(
             action=TokenAuditLog.ACTION_AUTH_SUCCESS,
             token=token,

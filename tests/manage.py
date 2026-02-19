@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-"""Manage.py entrypoint for package tests and migration validation."""
-
 import os
 import sys
 

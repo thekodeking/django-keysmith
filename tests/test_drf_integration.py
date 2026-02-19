@@ -1,9 +1,6 @@
-"""Tests for Keysmith DRF integration."""
-
 import pytest
 
 from keysmith.services.tokens import create_token, revoke_token
-
 
 drf_only = pytest.mark.skipif(
     not pytest.importorskip("rest_framework", reason="DRF not installed"),

@@ -1,5 +1,3 @@
-"""Tests for Keysmith Django integration."""
-
 import json
 
 import pytest
@@ -176,8 +174,8 @@ class TestKeysmithScopesDecorator:
 
     def test_scope_decorator_allows_with_required_scope(self, django_db_blocker):
         """Scope decorator allows access when token has required scope."""
-        from django.contrib.auth.models import Permission
         from django.contrib.auth import get_user_model
+        from django.contrib.auth.models import Permission
 
         User = get_user_model()
         user = User.objects.create_user(username="testuser")
@@ -245,8 +243,9 @@ class TestPlainDjangoViews:
 
     def test_resource_collection_get(self):
         """GET /api/resources/ returns list of resources."""
-        from tests.models import TestResource
         from django.contrib.auth import get_user_model
+
+        from tests.models import TestResource
 
         User = get_user_model()
         user = User.objects.create_user(username="testuser")
@@ -277,8 +276,9 @@ class TestPlainDjangoViews:
 
     def test_resource_collection_post_creates_resource(self):
         """POST /api/resources/ creates a new resource."""
-        from tests.models import TestResource
         from django.contrib.auth import get_user_model
+
+        from tests.models import TestResource
 
         User = get_user_model()
         user = User.objects.create_user(username="testuser")
@@ -314,8 +314,9 @@ class TestPlainDjangoViews:
 
     def test_resource_collection_post_requires_name(self):
         """POST /api/resources/ requires name field."""
-        from tests.models import TestResource
         from django.contrib.auth import get_user_model
+
+        from tests.models import TestResource
 
         User = get_user_model()
         user = User.objects.create_user(username="testuser")
@@ -349,8 +350,9 @@ class TestPlainDjangoViews:
 
     def test_resource_detail_get(self):
         """GET /api/resources/<pk>/ returns resource details."""
-        from tests.models import TestResource
         from django.contrib.auth import get_user_model
+
+        from tests.models import TestResource
 
         User = get_user_model()
         user = User.objects.create_user(username="testuser")
@@ -382,8 +384,9 @@ class TestPlainDjangoViews:
 
     def test_resource_detail_put_updates(self):
         """PUT /api/resources/<pk>/ updates resource."""
-        from tests.models import TestResource
         from django.contrib.auth import get_user_model
+
+        from tests.models import TestResource
 
         User = get_user_model()
         user = User.objects.create_user(username="testuser")
@@ -420,8 +423,9 @@ class TestPlainDjangoViews:
 
     def test_resource_detail_delete(self):
         """DELETE /api/resources/<pk>/ deletes resource."""
-        from tests.models import TestResource
         from django.contrib.auth import get_user_model
+
+        from tests.models import TestResource
 
         User = get_user_model()
         user = User.objects.create_user(username="testuser")
@@ -452,8 +456,9 @@ class TestPlainDjangoViews:
 
     def test_resource_detail_not_found(self):
         """Accessing non-existent resource returns 404."""
-        from tests.models import TestResource
         from django.contrib.auth import get_user_model
+
+        from tests.models import TestResource
 
         User = get_user_model()
         user = User.objects.create_user(username="testuser")
