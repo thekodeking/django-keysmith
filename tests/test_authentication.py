@@ -53,8 +53,7 @@ class TestAuthenticateToken:
 
     def test_authenticate_token_wrong_checksum_raises_invalid(self):
         """Token with wrong checksum raises InvalidToken."""
-        token, raw_token = create_token(name="test-token")
-        # Tamper with checksum
+        _, raw_token = create_token(name="test-token")
         tampered = raw_token[:-6] + "000000"
 
         with pytest.raises(InvalidToken):
@@ -68,7 +67,6 @@ class TestAuthenticateToken:
     def test_authenticate_token_wrong_secret_raises_invalid(self):
         """Token with wrong secret raises InvalidToken."""
         token, _ = create_token(name="test-token")
-        # Create token with same prefix but different secret
         fake_token = f"{token.prefix}:wrongsecret1234567890123456789012345678901234"
 
         with pytest.raises(InvalidToken):
@@ -139,9 +137,7 @@ class TestTokenFormatValidation:
         """Checksum comparison uses timing-safe comparison."""
         # This test verifies that checksum validation doesn't use simple string comparison
         # which would be vulnerable to timing attacks
-        token, raw_token = create_token(name="test-token")
-
-        # Tamper with last character
+        _, raw_token = create_token(name="test-token")
         tampered = raw_token[:-1] + ("0" if raw_token[-1] != "0" else "1")
 
         with pytest.raises(InvalidToken):

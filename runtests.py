@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-"""Project-level test runner inspired by Django REST framework's test harness."""
-
 from __future__ import annotations
 
 import os

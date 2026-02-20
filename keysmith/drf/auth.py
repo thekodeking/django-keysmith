@@ -20,7 +20,7 @@ class KeysmithAuthentication(BaseAuthentication):
     """Authenticate DRF requests using Keysmith tokens from configured header."""
 
     def authenticate(self, request):
-        # Prevent duplicate audit records when middleware is also enabled.
+        # prevent duplicate audit records when middleware is also enabled.
         if hasattr(request, "_request"):
             request._request._keysmith_skip_middleware_audit = True
 
