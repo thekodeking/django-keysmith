@@ -1,0 +1,90 @@
+[project]
+site_name = "Django Keysmith"
+site_description = "Production-ready API token management for Django"
+site_author = "thekodeking"
+site_url = "https://django-keysmith.readthedocs.io"
+docs_dir = "docs"
+repo_name = "thekodeking/django-keysmith"
+repo_url = "https://github.com/thekodeking/django-keysmith"
+edit_uri = "edit/main/docs"
+copyright = """
+Copyright &copy; 2026 thekodeking
+"""
+
+nav = [
+  { Home = "index.md" },
+  { "Getting Started" = [
+    { Installation = "installation.md" },
+    { "Quick Start" = "quickstart.md" },
+    { Configuration = "configuration.md" },
+  ] },
+  { "User Guide" = [
+    { "Token Management" = "guide/token-management.md" },
+    { Authentication = "guide/authentication.md" },
+    { "Permissions and Scopes" = "guide/permissions.md" },
+    { "Audit Logging" = "guide/audit-logging.md" },
+  ] },
+  { Integration = [
+    { "Django REST Framework" = "integration/drf.md" },
+    { "Plain Django" = "integration/plain-django.md" },
+  ] },
+  { "API Reference" = [
+    { Services = "api/services.md" },
+    { Models = "api/models.md" },
+    { Authentication = "api/authentication.md" },
+    { Permissions = "api/permissions.md" },
+  ] },
+  { Development = [
+    { Contributing = "development.md" },
+    { "Security Model" = "security-model.md" },
+    { Changelog = "changelog.md" },
+  ] },
+]
+
+extra_css = ["stylesheets/extra.css"]
+plugins = ["search"]
+
+[project.theme]
+language = "en"
+features = [
+  "navigation.instant",
+  "navigation.tracking",
+  "navigation.sections",
+  "navigation.top",
+  "navigation.footer",
+  "search.suggest",
+  "search.highlight",
+  "content.code.copy",
+  "content.code.annotate",
+]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "indigo"
+accent = "indigo"
+
+[project.theme.palette.toggle]
+icon = "material/brightness-7"
+name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "indigo"
+accent = "indigo"
+
+[project.theme.palette.toggle]
+icon = "material/brightness-4"
+name = "Switch to light mode"
+
+[project.extra]
+version = { provider = "mike" }
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/thekodeking"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/python"
+link = "https://pypi.org/project/django-keysmith/"
