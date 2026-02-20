@@ -155,16 +155,7 @@ revoke_token(token, purge=True, actor=request.user, request=request)
 
 ## Authentication Flow
 
-```mermaid
-flowchart LR
-    A[Client sends token in header] --> B[Parse and checksum validation]
-    B --> C[Lookup by prefix]
-    C --> D[State checks: revoked/purged/expired]
-    D --> E[Secret hash verification]
-    E --> F[Mark token used]
-    F --> G[Attach auth context to request]
-    G --> H[Write audit event]
-```
+For each request, Keysmith reads the token from the configured header, validates format and checksum, resolves the token by prefix, enforces lifecycle checks (revoked, purged, expired), verifies the secret hash, marks the token as used, attaches auth context to the request, and writes the corresponding audit event.
 
 ## Public Token Format
 
