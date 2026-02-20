@@ -1,0 +1,45 @@
+name: Bug report
+description: Report a reproducible problem
+title: "bug: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this.
+        Please include clear reproduction steps so maintainers and community members can help quickly.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What did you do, what happened, and what did you expect?
+      placeholder: A short and clear description of the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Share exact steps, code snippets, or commands.
+      placeholder: |
+        1. Configure ...
+        2. Run ...
+        3. See error ...
+    validations:
+      required: true
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: Include django-keysmith, Django, and Python versions.
+      placeholder: |
+        django-keysmith:
+        Django:
+        Python:
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or tracebacks (optional)
+      render: shell

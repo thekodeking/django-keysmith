@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and general support
+    url: https://github.com/thekodeking/django-keysmith/discussions
+    about: Please use Discussions for usage questions and ideas.
+  - name: Security reports
+    url: mailto:nkrishnaraj.developer@gmail.com
+    about: Please do not file public issues for vulnerabilities.
