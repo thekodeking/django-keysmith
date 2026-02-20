@@ -1,0 +1,32 @@
+/* Custom docs polish for readability */
+
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3 {
+  letter-spacing: 0.01em;
+}
+
+.md-typeset p,
+.md-typeset li {
+  line-height: 1.65;
+}
+
+.md-typeset pre {
+  border-radius: 8px;
+}
+
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: 8px;
+}
+
+/* Tables felt oversized in this theme; keep them compact and readable. */
+.md-typeset table:not([class]) {
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.md-typeset table:not([class]) th,
+.md-typeset table:not([class]) td {
+  padding: 0.5rem 0.625rem;
+}
