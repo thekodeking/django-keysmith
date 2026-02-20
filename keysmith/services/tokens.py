@@ -39,6 +39,49 @@ def _generate_unique_prefix() -> str:
     raise RuntimeError("Failed to generate unique token prefix")
 
 
+def _validate_available_scopes(scope_codenames: set[str]) -> None:
+    available = set(keysmith_settings.AVAILABLE_SCOPES or [])
+    if not available or not scope_codenames:
+        return
+
+    disallowed = scope_codenames - available
+    if disallowed:
+        disallowed_values = ", ".join(sorted(disallowed))
+        raise ValueError(
+            f"Requested scopes are not in AVAILABLE_SCOPES: {disallowed_values}"
+        )
+
+
+def _extract_scope_codenames(scopes: Iterable) -> set[str]:
+    if hasattr(scopes, "values_list"):
+        return set(scopes.values_list("codename", flat=True))
+
+    codenames = set()
+    for scope in scopes:
+        codename = getattr(scope, "codename", None)
+        if not codename:
+            raise TypeError(
+                "Scopes must be Permission instances (or a queryset of Permission instances)."
+            )
+        codenames.add(codename)
+    return codenames
+
+
+def _resolve_permissions_by_codename(scope_codenames: set[str]):
+    from django.contrib.auth.models import Permission
+
+    if not scope_codenames:
+        return Permission.objects.none()
+
+    permissions = Permission.objects.filter(codename__in=scope_codenames)
+    found = set(permissions.values_list("codename", flat=True))
+    missing = scope_codenames - found
+    if missing:
+        missing_values = ", ".join(sorted(missing))
+        raise ValueError(f"Scope permissions were not found: {missing_values}")
+    return permissions
+
+
 @transaction.atomic
 def create_token(
     *,
@@ -66,6 +109,17 @@ def create_token(
     )
     hashed: str = hasher.hash(secret)
 
+    scopes_to_assign = scopes
+    if scopes_to_assign is None:
+        default_scope_codenames = set(keysmith_settings.DEFAULT_SCOPES or [])
+        _validate_available_scopes(default_scope_codenames)
+        scopes_to_assign = _resolve_permissions_by_codename(default_scope_codenames)
+    else:
+        if not hasattr(scopes_to_assign, "values_list"):
+            scopes_to_assign = list(scopes_to_assign)
+        requested_scope_codenames = _extract_scope_codenames(scopes_to_assign)
+        _validate_available_scopes(requested_scope_codenames)
+
     token = Token.objects.create(
         name=name,
         description=description,
@@ -78,8 +132,8 @@ def create_token(
         expires_at=expires_at or _default_expiry(),
     )
 
-    if scopes is not None:
-        token.scopes.set(scopes)
+    if scopes_to_assign is not None:
+        token.scopes.set(scopes_to_assign)
 
     return token, pt.token
 

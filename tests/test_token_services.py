@@ -83,6 +83,49 @@ class TestCreateToken:
                 token, _ = create_token(name="test-token", scopes=[permission])
                 assert token.scopes.filter(pk=permission.pk).exists()
 
+    def test_create_token_applies_default_scopes_from_settings(self):
+        """Token receives default scopes when scopes are not explicitly provided."""
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+
+        content_type = ContentType.objects.get_for_model(Token)
+        permission, _ = Permission.objects.get_or_create(
+            codename="keysmith_default_scope",
+            defaults={"name": "Keysmith Default Scope", "content_type": content_type},
+            content_type=content_type,
+        )
+
+        with pytest.MonkeyPatch.context() as mp:
+            from keysmith import settings as ks_settings
+
+            mp.setattr(ks_settings.keysmith_settings, "AVAILABLE_SCOPES", [permission.codename])
+            mp.setattr(ks_settings.keysmith_settings, "DEFAULT_SCOPES", [permission.codename])
+
+            token, _ = create_token(name="default-scoped-token")
+
+        assert token.scopes.filter(pk=permission.pk).exists()
+
+    def test_create_token_rejects_scope_not_in_available_scopes(self):
+        """Configured available scopes are enforced for explicit scopes."""
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+
+        content_type = ContentType.objects.get_for_model(Token)
+        permission, _ = Permission.objects.get_or_create(
+            codename="keysmith_outside_scope",
+            defaults={"name": "Keysmith Outside Scope", "content_type": content_type},
+            content_type=content_type,
+        )
+
+        with pytest.MonkeyPatch.context() as mp:
+            from keysmith import settings as ks_settings
+
+            mp.setattr(ks_settings.keysmith_settings, "AVAILABLE_SCOPES", ["allowed_scope_only"])
+            mp.setattr(ks_settings.keysmith_settings, "DEFAULT_SCOPES", [])
+
+            with pytest.raises(ValueError, match="not in AVAILABLE_SCOPES"):
+                create_token(name="invalid-scoped-token", scopes=[permission])
+
     def test_create_token_sets_timestamps(self):
         """Token creation sets created_at timestamp."""
         before = timezone.now()

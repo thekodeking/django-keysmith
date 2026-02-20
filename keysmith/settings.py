@@ -6,15 +6,8 @@ KEYSMITH_DEFAULTS = {
     "HASH_BACKEND": "keysmith.hashers.PBKDF2SHA512TokenHasher",
     "HASH_ITERATIONS": 100_000,
     "DEFAULT_EXPIRY_DAYS": 90,
-    "ROTATE_ON_USE": False,  # If True, tokens automatically rotate (re-hash) on each use
-    "AVAILABLE_SCOPES": [
-        "read",
-        "write",
-        "admin",
-        "audit",
-    ],
-    "DEFAULT_SCOPES": ["read"],
-    "PERMISSION_CLASS": None,  # Optional DRF permission class path (must implement `.has_permission`)
+    "AVAILABLE_SCOPES": [],
+    "DEFAULT_SCOPES": [],
     "TOKEN_MODEL": "keysmith.Token",
     "HEADER_NAME": "HTTP_X_KEYSMITH_TOKEN",
     "ALLOW_QUERY_PARAM": False,
