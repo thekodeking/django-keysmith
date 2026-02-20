@@ -1,7 +1,7 @@
 [project]
 name = "django-keysmith"
 version = "0.1.0"
-description = "A django application for API key management with rest-framework"
+description = "A django application for API key management with rest-framework support"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { file = "LICENSE" }
@@ -12,12 +12,14 @@ classifiers = [
   "Environment :: Web Environment",
   "Framework :: Django",
   "Framework :: Django :: 4.0",
+  "Framework :: Django :: 5.0",
   "Intended Audience :: Developers",
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
