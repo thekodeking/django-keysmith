@@ -95,6 +95,12 @@ def create_token(
 ):
     """Create and persist a new token, returning `(token, raw_public_token)`."""
     Token = get_token_model()
+    max_name_length = Token._meta.get_field("name").max_length
+    if max_name_length is not None and len(name) > max_name_length:
+        raise ValueError(
+            f"Token name must be {max_name_length} characters or fewer (got {len(name)})."
+        )
+
     if token_type is None:
         token_type = Token.TokenType.USER
     hasher: BaseTokenHasher = get_hasher()
