@@ -2,7 +2,7 @@
 site_name = "Django Keysmith"
 site_description = "Production-ready API token management for Django"
 site_author = "thekodeking"
-site_url = "https://django-keysmith.readthedocs.io"
+site_url = "https://thekodeking.github.io/django-keysmith/"
 docs_dir = "docs"
 repo_name = "thekodeking/django-keysmith"
 repo_url = "https://github.com/thekodeking/django-keysmith"

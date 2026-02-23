@@ -36,7 +36,7 @@ test:
 	uv run python runtests.py
 
 lint:
-	uv run ruff check $(PACKAGE)
+	uv run ruff check .
 
 format:
 	uv run ruff format $(PACKAGE)
