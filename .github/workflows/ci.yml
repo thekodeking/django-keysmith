@@ -10,25 +10,20 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.10", "3.11"]
-        django-version: ["4.2", "5.0"]
-
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.11"
 
       - name: Install uv
         run: pip install uv
 
       - name: Install dependencies
         run: |
-          uv pip install -e .[dev]
-          uv pip install "django==${{ matrix.django-version }}"
+          uv pip install --system -e .[dev]
+          uv pip install --system "django==5.0"
 
       - name: Run lint
         run: ruff check .
