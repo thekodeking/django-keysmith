@@ -46,6 +46,7 @@ dev = [
   "mypy>=0.941",
   "pytest>=7.0.0",
   "pytest-django>=4.5.2",
+  "ruff>=0.15.2",
 ]
 
 [build-system]
