@@ -1,3 +1,4 @@
+import importlib.util
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -67,9 +68,7 @@ KEYSMITH = {
     "HINT_LENGTH": 8,
 }
 
-try:
-    import rest_framework
-
+if importlib.util.find_spec("rest_framework") is not None:
     INSTALLED_APPS.append("rest_framework")
     REST_FRAMEWORK = {
         "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -79,5 +78,3 @@ try:
             "rest_framework.permissions.IsAuthenticated",
         ],
     }
-except ImportError:
-    pass
