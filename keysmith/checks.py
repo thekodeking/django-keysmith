@@ -85,7 +85,6 @@ def check_sqlite_concurrency(app_configs, **kwargs):
     """
     from django.db import connections
 
-    db_alias = (app_configs[0].default_auto_field if app_configs else None) or "default"
     try:
         vendor = connections["default"].vendor
     except Exception:

@@ -26,6 +26,8 @@ class KeysmithAuthentication(BaseAuthentication):
 
         header_name = keysmith_settings.HEADER_NAME.replace("HTTP_", "").replace("_", "-")
         raw = request.headers.get(header_name)
+        if not raw and keysmith_settings.ALLOW_QUERY_PARAM:
+            raw = request.query_params.get(keysmith_settings.QUERY_PARAM_NAME)
         if not raw:
             return None
 
