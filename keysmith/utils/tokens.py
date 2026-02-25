@@ -5,8 +5,6 @@ import string
 import zlib
 from dataclasses import dataclass
 
-from keysmith.settings import keysmith_settings
-
 _DICTIONARY = string.ascii_letters + string.digits
 
 

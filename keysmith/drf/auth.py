@@ -67,7 +67,9 @@ class KeysmithAuthentication(BaseAuthentication):
         user = token.user
         if user is None:
             unauthenticated_user = api_settings.UNAUTHENTICATED_USER
-            user = unauthenticated_user() if callable(unauthenticated_user) else unauthenticated_user
+            user = (
+                unauthenticated_user() if callable(unauthenticated_user) else unauthenticated_user
+            )
 
         return (user, token)
 

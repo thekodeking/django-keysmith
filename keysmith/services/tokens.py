@@ -47,9 +47,7 @@ def _validate_available_scopes(scope_codenames: set[str]) -> None:
     disallowed = scope_codenames - available
     if disallowed:
         disallowed_values = ", ".join(sorted(disallowed))
-        raise ValueError(
-            f"Requested scopes are not in AVAILABLE_SCOPES: {disallowed_values}"
-        )
+        raise ValueError(f"Requested scopes are not in AVAILABLE_SCOPES: {disallowed_values}")
 
 
 def _extract_scope_codenames(scopes: Iterable) -> set[str]:
