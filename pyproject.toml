@@ -30,7 +30,7 @@ dependencies = [
 Homepage = "https://github.com/thekodeking/django-keysmith"
 Issues = "https://github.com/thekodeking/django-keysmith/issues"
 Repository = "https://github.com/thekodeking/django-keysmith"
-Documentation = "https://github.com/thekodeking/django-keysmith/tree/main/docs"
+Documentation = "https://thekodeking.github.io/django-keysmith/"
 
 [project.optional-dependencies]
 drf = ["djangorestframework>=3.15.2"]
