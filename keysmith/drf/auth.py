@@ -3,6 +3,7 @@ from django.core.exceptions import ImproperlyConfigured
 try:
     from rest_framework.authentication import BaseAuthentication
     from rest_framework.exceptions import AuthenticationFailed, Throttled
+    from rest_framework.settings import api_settings
 except Exception as exc:
     raise ImproperlyConfigured(
         "Keysmith DRF authentication requires installing django-keysmith[drf]."
@@ -19,6 +20,10 @@ from keysmith.settings import keysmith_settings
 class KeysmithAuthentication(BaseAuthentication):
     """Authenticate DRF requests using Keysmith tokens from configured header."""
 
+    def authenticate_header(self, request) -> str:
+        """Return auth header name so DRF can emit 401 responses when required."""
+        return keysmith_settings.HEADER_NAME.replace("HTTP_", "").replace("_", "-")
+
     def authenticate(self, request):
         # prevent duplicate audit records when middleware is also enabled.
         if hasattr(request, "_request"):
@@ -26,6 +31,8 @@ class KeysmithAuthentication(BaseAuthentication):
 
         header_name = keysmith_settings.HEADER_NAME.replace("HTTP_", "").replace("_", "-")
         raw = request.headers.get(header_name)
+        if not raw and keysmith_settings.ALLOW_QUERY_PARAM:
+            raw = request.query_params.get(keysmith_settings.QUERY_PARAM_NAME)
         if not raw:
             return None
 
@@ -57,7 +64,14 @@ class KeysmithAuthentication(BaseAuthentication):
             token=token,
             status_code=200,
         )
-        return (token.user, token)
+        user = token.user
+        if user is None:
+            unauthenticated_user = api_settings.UNAUTHENTICATED_USER
+            user = (
+                unauthenticated_user() if callable(unauthenticated_user) else unauthenticated_user
+            )
+
+        return (user, token)
 
 
 __all__ = ["KeysmithAuthentication"]

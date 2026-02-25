@@ -52,7 +52,7 @@ It also emits audit events after response:
 - reads token from `request.headers`
 - authenticates through `authenticate_token`
 - applies optional `DRF_THROTTLE_HOOK`
-- returns `(token.user, token)`
+- returns `(request_user, token)`, using DRF's unauthenticated user object when the token has no user
 - writes auth audit events
 
 ## Token Format

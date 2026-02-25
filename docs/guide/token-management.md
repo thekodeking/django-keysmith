@@ -39,14 +39,14 @@ Rotation updates the stored hash and immediately invalidates the old raw token.
 Revoke tokens when they should stop authenticating. Purge adds an explicit lifecycle marker for workflows that distinguish permanent retirement.
 
 ```python
-from keysmith.services.tokens import revoke_token
+from keysmith.services.tokens import purge_token, revoke_token
 
 revoke_token(token, actor=request.user, request=request)
-revoke_token(token, purge=True, actor=request.user, request=request)
+purge_token(token, actor=request.user, request=request)
 ```
 
-- `revoke=True` behavior: token cannot authenticate.
-- `purge=True`: additionally marks the token as purged for lifecycle tracking.
+- `revoke_token(...)`: token cannot authenticate.
+- `purge_token(...)`: soft-delete lifecycle marker (`purged=True`, also revoked).
 
 ## Useful Queries
 
@@ -70,7 +70,7 @@ stateDiagram-v2
     [*] --> Active
     Active --> Active: rotate_token()
     Active --> Revoked: revoke_token()
-    Active --> Purged: revoke_token(purge=True)
+    Active --> Purged: purge_token()
     Active --> Expired: now > expires_at
 ```
 

@@ -43,10 +43,19 @@ Replaces token secret/hash and returns a new raw token.
 
 Revocation is terminal for authentication and should be the default response for decommissioned credentials.
 
-Marks token revoked (and optionally purged).
+Marks token revoked.
 
 - Logs `revoked` event when state changes
-- Includes `actor_id` and `purge` metadata in audit `extra`
+- Includes `actor_id` and `purge=False` metadata in audit `extra`
+
+`purge=True` remains supported for backward compatibility and delegates to `purge_token(...)`.
+
+## `purge_token(token, *, request=None, actor=None) -> None`
+
+Purge is a soft-delete operation that marks a token as permanently retired.
+
+- Marks both `purged=True` and `revoked=True`
+- Logs `revoked` event with `purge=True` metadata in audit `extra`
 
 ## `mark_token_used(token) -> None`
 

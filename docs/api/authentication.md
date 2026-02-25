@@ -43,7 +43,8 @@ Behavior summary:
 - calls `authenticate_token()`
 - optionally runs `DRF_THROTTLE_HOOK`
 - logs auth success/failure events
-- returns `(token.user, token)`
+- returns `(request_user, token)` where `request_user` is `token.user` when present,
+  otherwise DRF's configured unauthenticated user object
 
 ## Django Middleware
 

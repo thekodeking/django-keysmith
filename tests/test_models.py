@@ -4,7 +4,7 @@ import pytest
 from django.utils import timezone
 
 from keysmith.models import Token, TokenAuditLog
-from keysmith.services.tokens import create_token, revoke_token
+from keysmith.services.tokens import create_token, purge_token, revoke_token
 
 
 @pytest.mark.django_db
@@ -72,7 +72,7 @@ class TestTokenModel:
     def test_token_is_active_purged(self):
         """is_active returns False for purged token."""
         token, _ = create_token(name="purged-token")
-        revoke_token(token, purge=True)
+        purge_token(token)
         token.refresh_from_db()
 
         assert token.is_active is False
@@ -139,7 +139,6 @@ class TestTokenModel:
                 name="token-2",
                 key=token1.key,
                 prefix="tok_unique2",
-                hint="hint2",
             )
 
 
@@ -245,4 +244,7 @@ class TestTokenAuditLogModel:
             status_code=200,
         )
 
-        assert token.audit_logs.count() == 1
+        log = token.audit_logs.filter(
+            action=TokenAuditLog.ACTION_AUTH_SUCCESS, path="/api/test/"
+        ).first()
+        assert log is not None

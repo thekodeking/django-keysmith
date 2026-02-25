@@ -38,18 +38,28 @@ class HasKeysmithScopes(BasePermission):
 
     required_scopes: set[str] = set()
 
+    def _required_scopes_for_view(self, view) -> set[str]:
+        raw_scopes = getattr(view, "required_scopes", self.required_scopes)
+        if isinstance(raw_scopes, str):
+            return {raw_scopes}
+        return set(raw_scopes or [])
+
     def has_permission(self, request, view) -> bool:
         token = getattr(request, "auth", None)
 
         if not token:
             return False
 
+        required_scopes = self._required_scopes_for_view(view)
+        if not required_scopes:
+            return True
+
         token_scopes_field = getattr(token, "scopes", None)
         if hasattr(token_scopes_field, "values_list"):
             token_scopes = set(token_scopes_field.values_list("codename", flat=True))
         else:
             token_scopes = set(token_scopes_field or [])
-        missing = self.required_scopes - token_scopes
+        missing = required_scopes - token_scopes
 
         if missing:
             raise PermissionDenied(get_message("insufficient_scope"))

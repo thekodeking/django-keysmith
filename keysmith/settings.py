@@ -16,7 +16,6 @@ KEYSMITH_DEFAULTS = {
     "AUDIT_LOG_MODEL": "keysmith.TokenAuditLog",
     "TOKEN_PREFIX": "tok",
     "TOKEN_SECRET_LENGTH": 32,
-    "HINT_LENGTH": 8,
     "RATE_LIMIT_HOOK": None,  # Optional dotted callable: hook(request, raw_token=None)
     "DRF_THROTTLE_HOOK": None,  # Optional dotted callable: hook(request, token=None)
     "DEFAULT_ERROR_MESSAGES": {

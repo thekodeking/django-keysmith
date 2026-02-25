@@ -5,7 +5,7 @@ from django.utils import timezone
 
 from keysmith.auth.base import authenticate_token
 from keysmith.auth.exceptions import ExpiredToken, InvalidToken, RevokedToken
-from keysmith.services.tokens import create_token, revoke_token
+from keysmith.services.tokens import create_token, purge_token, revoke_token
 
 
 @pytest.mark.django_db
@@ -83,7 +83,7 @@ class TestAuthenticateToken:
     def test_authenticate_purged_token_raises_revoked(self):
         """Purged token raises RevokedToken."""
         token, raw_token = create_token(name="purged-token")
-        revoke_token(token, purge=True)
+        purge_token(token)
 
         with pytest.raises(RevokedToken):
             authenticate_token(raw_token)

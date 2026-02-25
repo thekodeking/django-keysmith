@@ -32,7 +32,6 @@ The table below lists the settings used by Keysmith services, middleware, and DR
 | `ENABLE_AUDIT_LOGGING` | `True` | Enable audit writes |
 | `TOKEN_PREFIX` | `tok` | Prefix namespace for new tokens |
 | `TOKEN_SECRET_LENGTH` | `32` | Secret length used for new tokens |
-| `HINT_LENGTH` | `8` | Max hint length stored on token |
 | `RATE_LIMIT_HOOK` | `None` | Hook path: `hook(request, raw_token=None)` |
 | `DRF_THROTTLE_HOOK` | `None` | Hook path: `hook(request, token=None)` |
 | `DEFAULT_ERROR_MESSAGES` | built-in map | Error text overrides |
@@ -75,7 +74,6 @@ KEYSMITH = {
     "ENABLE_AUDIT_LOGGING": True,
     "TOKEN_PREFIX": "api",
     "TOKEN_SECRET_LENGTH": 40,
-    "HINT_LENGTH": 8,
     "DEFAULT_ERROR_MESSAGES": {
         "invalid_token": "API token is invalid or expired.",
         "insufficient_scope": "Token does not have required scope.",

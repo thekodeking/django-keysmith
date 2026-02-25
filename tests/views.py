@@ -28,7 +28,6 @@ def token_status_view(request: HttpRequest) -> JsonResponse:
         {
             "authenticated": True,
             "token_prefix": getattr(token, "prefix", None),
-            "token_hint": getattr(token, "hint", None),
             "user_id": getattr(user, "pk", None),
             "user": str(user) if user else None,
         }

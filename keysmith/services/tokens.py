@@ -47,9 +47,7 @@ def _validate_available_scopes(scope_codenames: set[str]) -> None:
     disallowed = scope_codenames - available
     if disallowed:
         disallowed_values = ", ".join(sorted(disallowed))
-        raise ValueError(
-            f"Requested scopes are not in AVAILABLE_SCOPES: {disallowed_values}"
-        )
+        raise ValueError(f"Requested scopes are not in AVAILABLE_SCOPES: {disallowed_values}")
 
 
 def _extract_scope_codenames(scopes: Iterable) -> set[str]:
@@ -92,9 +90,19 @@ def create_token(
     scopes: Iterable = None,
     expires_at=None,
     token_type: str | None = None,
+    request=None,
 ):
-    """Create and persist a new token, returning `(token, raw_public_token)`."""
+    """Create and persist a new token, returning `(token, raw_public_token)`.
+
+    Passing ``request`` is optional; when provided the audit event will
+    include request context (path, IP, user-agent).
+    """
     Token = get_token_model()
+    max_name_length = Token._meta.get_field("name").max_length
+    if max_name_length is not None and len(name) > max_name_length:
+        raise ValueError(
+            f"Token name must be {max_name_length} characters or fewer (got {len(name)})."
+        )
     if token_type is None:
         token_type = Token.TokenType.USER
     hasher: BaseTokenHasher = get_hasher()
@@ -128,12 +136,22 @@ def create_token(
         token_type=token_type,
         key=hashed,
         prefix=pt.full_prefix,
-        hint=pt.hint,
         expires_at=expires_at or _default_expiry(),
     )
 
     if scopes_to_assign is not None:
         token.scopes.set(scopes_to_assign)
+
+    log_audit_event(
+        action="created",
+        request=request,
+        token=token,
+        status_code=201,
+        extra={
+            "actor_id": getattr(created_by or user, "pk", None),
+            "token_name": name,
+        },
+    )
 
     return token, pt.token
 
@@ -155,9 +173,8 @@ def rotate_token(token, *, request=None, actor=None) -> str:
     )
 
     token.key = hasher.hash(secret)
-    token.hint = pt.hint
     token.last_used_at = None
-    token.save(update_fields=["key", "hint", "last_used_at"])
+    token.save(update_fields=["key", "last_used_at"])
     log_audit_event(
         action="rotated",
         request=request,
@@ -171,29 +188,57 @@ def rotate_token(token, *, request=None, actor=None) -> str:
 
 @transaction.atomic
 def revoke_token(token, *, purge: bool = False, request=None, actor=None) -> None:
-    """Revoke (and optionally purge) a token and log the lifecycle event."""
-    updates = {}
+    """Revoke a token and log the lifecycle event.
 
+    When ``purge=True`` this delegates to :func:`purge_token` for compatibility.
+    """
+    if purge:
+        purge_token(token, request=request, actor=actor)
+        return
+
+    if token.revoked:
+        return
+
+    token.__class__.objects.filter(pk=token.pk).update(revoked=True)
+    token.revoked = True
+    log_audit_event(
+        action="revoked",
+        request=request,
+        token=token,
+        status_code=200,
+        extra={
+            "actor_id": getattr(actor, "pk", None),
+            "purge": False,
+        },
+    )
+
+
+@transaction.atomic
+def purge_token(token, *, request=None, actor=None) -> None:
+    """Soft-delete a token by marking it purged (and revoked)."""
+    updates = {}
     if not token.revoked:
         updates["revoked"] = True
-
-    if purge and not token.purged:
+    if not token.purged:
         updates["purged"] = True
 
-    if updates:
-        token.__class__.objects.filter(pk=token.pk).update(**updates)
-        for field, value in updates.items():
-            setattr(token, field, value)
-        log_audit_event(
-            action="revoked",
-            request=request,
-            token=token,
-            status_code=200,
-            extra={
-                "actor_id": getattr(actor, "pk", None),
-                "purge": purge,
-            },
-        )
+    if not updates:
+        return
+
+    token.__class__.objects.filter(pk=token.pk).update(**updates)
+    for field, value in updates.items():
+        setattr(token, field, value)
+
+    log_audit_event(
+        action="revoked",
+        request=request,
+        token=token,
+        status_code=200,
+        extra={
+            "actor_id": getattr(actor, "pk", None),
+            "purge": True,
+        },
+    )
 
 
 def mark_token_used(token) -> None:

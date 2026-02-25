@@ -5,7 +5,7 @@ from django.http import HttpRequest
 
 from keysmith.audit.logger import _get_ip_address, _request_context, log_audit_event
 from keysmith.models import TokenAuditLog
-from keysmith.services.tokens import create_token, revoke_token, rotate_token
+from keysmith.services.tokens import create_token, purge_token, revoke_token, rotate_token
 
 
 @pytest.mark.django_db
@@ -32,6 +32,16 @@ class TestAuditLogging:
 
         log = TokenAuditLog.objects.filter(token=token, action=TokenAuditLog.ACTION_REVOKED).first()
         assert log is not None
+
+    def test_audit_log_created_on_purge(self):
+        """Purging a token creates audit log with purge marker."""
+        token, _ = create_token(name="test-token")
+
+        purge_token(token)
+
+        log = TokenAuditLog.objects.filter(token=token, action=TokenAuditLog.ACTION_REVOKED).first()
+        assert log is not None
+        assert log.extra.get("purge") is True
 
     def test_audit_log_created_on_rotate(self):
         """Rotating a token creates audit log."""

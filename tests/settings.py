@@ -65,7 +65,6 @@ KEYSMITH = {
     "ENABLE_AUDIT_LOGGING": True,
     "TOKEN_PREFIX": "tok",
     "TOKEN_SECRET_LENGTH": 32,
-    "HINT_LENGTH": 8,
 }
 
 if importlib.util.find_spec("rest_framework") is not None:
