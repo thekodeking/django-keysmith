@@ -13,7 +13,6 @@ def keysmith_model_contract_checks(app_configs, **kwargs):
     required_token_fields = (
         "key",
         "prefix",
-        "hint",
         "revoked",
         "purged",
         "expires_at",

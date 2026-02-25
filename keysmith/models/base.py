@@ -50,7 +50,6 @@ class AbstractToken(models.Model):
     key = models.CharField(max_length=256, unique=True)
 
     prefix = models.CharField(max_length=12, db_index=True)
-    hint = models.CharField(max_length=8)
 
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(null=True, blank=True)
@@ -96,18 +95,20 @@ class AbstractTokenAuditLog(models.Model):
     """
     Contract for token audit logging.
 
-    This model records both token lifecycle events (revoke, rotate)
+    This model records token lifecycle events (create, revoke, rotate)
     and request-level authentication attempts.
     """
 
     ACTION_AUTH_SUCCESS = "auth_success"
     ACTION_AUTH_FAILED = "auth_failed"
+    ACTION_CREATED = "created"
     ACTION_REVOKED = "revoked"
     ACTION_ROTATED = "rotated"
 
     ACTION_CHOICES = [
         (ACTION_AUTH_SUCCESS, "Authentication Success"),
         (ACTION_AUTH_FAILED, "Authentication Failed"),
+        (ACTION_CREATED, "Token Created"),
         (ACTION_REVOKED, "Token Revoked"),
         (ACTION_ROTATED, "Token Rotated"),
     ]

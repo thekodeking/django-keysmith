@@ -6,7 +6,7 @@ from django.utils import timezone
 from keysmith.auth.base import authenticate_token
 from keysmith.auth.exceptions import ExpiredToken, InvalidToken, RevokedToken
 from keysmith.models import Token, TokenAuditLog
-from keysmith.services.tokens import create_token, revoke_token, rotate_token
+from keysmith.services.tokens import create_token, purge_token, revoke_token, rotate_token
 
 
 @pytest.mark.django_db
@@ -139,6 +139,14 @@ class TestCreateToken:
         with pytest.raises(TypeError):
             create_token()  # pylint: disable=no-value-for-parameter
 
+    def test_create_token_rejects_name_longer_than_field_max_length(self):
+        """create_token validates `name` length before persistence."""
+        max_name_length = Token._meta.get_field("name").max_length
+        too_long_name = "x" * (max_name_length + 1)
+
+        with pytest.raises(ValueError, match=f"{max_name_length} characters or fewer"):
+            create_token(name=too_long_name)
+
 
 @pytest.mark.django_db
 class TestRevokeToken:
@@ -166,27 +174,6 @@ class TestRevokeToken:
         assert audit_log is not None
         assert audit_log.extra.get("purge") is False
 
-    def test_revoke_token_with_purge(self):
-        """Revoking with purge also marks token as purged."""
-        token, _ = create_token(name="test-token")
-
-        revoke_token(token, purge=True)
-        token.refresh_from_db()
-
-        assert token.revoked
-        assert token.purged
-
-    def test_revoke_token_logs_purge_in_audit(self):
-        """Revoke with purge includes purge flag in audit log."""
-        token, _ = create_token(name="test-token")
-
-        revoke_token(token, purge=True)
-
-        audit_log = TokenAuditLog.objects.filter(
-            token=token, action=TokenAuditLog.ACTION_REVOKED
-        ).first()
-        assert audit_log.extra.get("purge") is True
-
     def test_revoke_already_revoked_token_no_duplicate_log(self):
         """Revoking an already revoked token doesn't duplicate audit logs."""
         token, _ = create_token(name="test-token")
@@ -196,6 +183,58 @@ class TestRevokeToken:
         ).count()
 
         revoke_token(token)
+        final_count = TokenAuditLog.objects.filter(
+            token=token, action=TokenAuditLog.ACTION_REVOKED
+        ).count()
+
+        assert initial_count == final_count
+
+    def test_revoke_with_purge_is_backward_compatible(self):
+        """`revoke_token(..., purge=True)` still performs purge semantics."""
+        token, _ = create_token(name="test-token")
+
+        revoke_token(token, purge=True)
+        token.refresh_from_db()
+
+        assert token.revoked
+        assert token.purged
+
+
+@pytest.mark.django_db
+class TestPurgeToken:
+    """Test token purge (soft delete) service."""
+
+    def test_purge_token_marks_token_revoked_and_purged(self):
+        """Purging soft-deletes by setting both revoked and purged flags."""
+        token, _ = create_token(name="test-token")
+
+        purge_token(token)
+        token.refresh_from_db()
+
+        assert token.revoked
+        assert token.purged
+
+    def test_purge_token_logs_audit_event(self):
+        """Purging emits a revoked audit event with purge marker."""
+        token, _ = create_token(name="test-token")
+
+        purge_token(token)
+
+        audit_log = TokenAuditLog.objects.filter(
+            token=token, action=TokenAuditLog.ACTION_REVOKED
+        ).first()
+        assert audit_log is not None
+        assert audit_log.extra.get("purge") is True
+
+    def test_purge_already_purged_token_no_duplicate_log(self):
+        """Purging an already purged token doesn't duplicate audit logs."""
+        token, _ = create_token(name="test-token")
+        purge_token(token)
+        initial_count = TokenAuditLog.objects.filter(
+            token=token, action=TokenAuditLog.ACTION_REVOKED
+        ).count()
+
+        purge_token(token)
         final_count = TokenAuditLog.objects.filter(
             token=token, action=TokenAuditLog.ACTION_REVOKED
         ).count()
@@ -270,7 +309,7 @@ class TestRotateToken:
     def test_rotate_purged_token_raises_error(self):
         """Cannot rotate a purged token."""
         token, _ = create_token(name="test-token")
-        revoke_token(token, purge=True)
+        purge_token(token)
 
         with pytest.raises(ValueError, match="Cannot rotate a revoked"):
             rotate_token(token)
@@ -339,6 +378,6 @@ class TestTokenLifecycleIntegration:
 
         # Purged token
         token, _ = create_token(name="purged-token")
-        revoke_token(token, purge=True)
+        purge_token(token)
         token.refresh_from_db()
         assert not token.is_active

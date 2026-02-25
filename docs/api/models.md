@@ -16,7 +16,7 @@ Key fields:
 - `token_type` (`user` or `system`)
 - `scopes` (`ManyToMany` to `auth.Permission`)
 - `key` (hashed secret)
-- `prefix`, `hint`
+- `prefix`
 - `created_at`, `expires_at`, `last_used_at`
 - `revoked`, `purged`
 
@@ -64,7 +64,7 @@ Configured models are validated by Django system checks at startup.
 
 Required token fields include:
 
-- `key`, `prefix`, `hint`, `revoked`, `purged`, `expires_at`, `last_used_at`, `user`
+- `key`, `prefix`, `revoked`, `purged`, `expires_at`, `last_used_at`, `user`
 
 Required audit fields include:
 

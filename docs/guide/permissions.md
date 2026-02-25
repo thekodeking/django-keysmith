@@ -40,6 +40,17 @@ class RequireWriteScope(HasKeysmithScopes):
     required_scopes = {"write"}
 ```
 
+You can also keep `HasKeysmithScopes` directly in `permission_classes` and declare
+`required_scopes` on the view:
+
+```python
+from keysmith.drf.permissions import HasKeysmithScopes, RequireKeysmithToken
+
+class WriteView(APIView):
+    permission_classes = [RequireKeysmithToken, HasKeysmithScopes]
+    required_scopes = {"write"}
+```
+
 ## Plain Django Scope Enforcement
 
 Use `keysmith_scopes` with `keysmith_required` for function-based or class-based plain Django views.

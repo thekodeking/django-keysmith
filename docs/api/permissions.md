@@ -23,13 +23,28 @@ This permission checks declared scopes against the token's permission codenames.
 from keysmith.drf.permissions import HasKeysmithScopes
 ```
 
-Checks token scopes against `required_scopes` on the permission instance/class.
+Checks token scopes against `required_scopes` declared on the DRF view or permission.
 Raises `PermissionDenied` if required scopes are missing.
+
+Scope source precedence:
+
+- `view.required_scopes` when defined on the DRF view
+- otherwise `required_scopes` on the permission class/instance
 
 Subclass usage:
 
 ```python
 class RequireWriteScope(HasKeysmithScopes):
+    required_scopes = {"write"}
+```
+
+View-level usage:
+
+```python
+from keysmith.drf.permissions import HasKeysmithScopes, RequireKeysmithToken
+
+class WriteView(APIView):
+    permission_classes = [RequireKeysmithToken, HasKeysmithScopes]
     required_scopes = {"write"}
 ```
 

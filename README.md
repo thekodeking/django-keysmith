@@ -199,7 +199,6 @@ Common options:
 | `ENABLE_AUDIT_LOGGING` | `True` | Enable audit row creation |
 | `TOKEN_PREFIX` | `tok` | Prefix namespace |
 | `TOKEN_SECRET_LENGTH` | `32` | Generated secret length |
-| `HINT_LENGTH` | `8` | Stored hint length |
 | `AVAILABLE_SCOPES` | `[]` | Allowed permission codenames |
 | `DEFAULT_SCOPES` | `[]` | Auto-assigned codenames on token create |
 | `RATE_LIMIT_HOOK` | `None` | Callable: `hook(request, raw_token=None)` |

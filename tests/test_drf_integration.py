@@ -41,6 +41,21 @@ class TestDRFAuthentication:
 
         assert response.status_code == 401
 
+    def test_drf_authentication_from_query_param_when_enabled(
+        self, client, settings, django_user_model
+    ):
+        """DRF accepts query-param token when ALLOW_QUERY_PARAM is enabled."""
+        settings.KEYSMITH = {
+            **settings.KEYSMITH,
+            "ALLOW_QUERY_PARAM": True,
+        }
+        user = django_user_model.objects.create_user(username="query-user")
+        _, raw_token = create_token(name="query-token", user=user)
+
+        response = client.get(f"/api/drf/status/?keysmith_token={raw_token}")
+
+        assert response.status_code == 200
+
     def test_drf_authentication_revoked_token(self, client):
         """DRF returns 401 when token is revoked."""
         token, raw_token = create_token(name="revoked-token")

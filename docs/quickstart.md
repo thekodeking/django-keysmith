@@ -60,13 +60,16 @@ curl -H "X-KEYSMITH-TOKEN: <raw-token>" \
 Lifecycle actions should be part of your normal operations. Rotation invalidates previous raw tokens immediately.
 
 ```python
-from keysmith.services.tokens import rotate_token, revoke_token
+from keysmith.services.tokens import purge_token, revoke_token, rotate_token
 
 new_raw_token = rotate_token(token)
 # old token is now invalid
 
 revoke_token(token)
 # token is permanently invalid
+
+purge_token(token)
+# token is soft-deleted (purged + revoked)
 ```
 
 ## Notes for Plain Django Views

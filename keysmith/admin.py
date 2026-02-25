@@ -2,9 +2,10 @@ from django.contrib import admin, messages
 from django.http import Http404, HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
+from django.utils.html import format_html
 
 from keysmith.models import Token, TokenAuditLog
-from keysmith.services.tokens import create_token, revoke_token
+from keysmith.services.tokens import create_token, purge_token, revoke_token, rotate_token
 
 
 @admin.register(Token)
@@ -14,7 +15,6 @@ class TokenAdmin(admin.ModelAdmin):
         "name",
         "token_type",
         "token_id_display",
-        "token_hint_display",
         "user",
         "revoked",
         "purged",
@@ -32,7 +32,6 @@ class TokenAdmin(admin.ModelAdmin):
     search_fields = (
         "name",
         "prefix",
-        "hint",
         "user__username",
         "user__email",
     )
@@ -40,13 +39,14 @@ class TokenAdmin(admin.ModelAdmin):
         "id",
         "key",
         "prefix",
-        "hint",
         "created_at",
         "last_used_at",
+        "rotate_token_link",
     )
     actions = (
         "revoke_selected_tokens",
         "purge_selected_tokens",
+        "rotate_selected_tokens",
     )
 
     _RAW_TOKEN_SESSION_PREFIX = "keysmith.raw_token."
@@ -55,9 +55,16 @@ class TokenAdmin(admin.ModelAdmin):
     def token_id_display(self, obj):
         return obj.prefix
 
-    @admin.display(description="Hint", ordering="hint")
-    def token_hint_display(self, obj):
-        return obj.hint
+    @admin.display(description="Rotate")
+    def rotate_token_link(self, obj):
+        if not obj.pk or obj.revoked or obj.purged:
+            return "-"
+        url = reverse(
+            "admin:keysmith_token_rotate",
+            args=[obj.pk],
+            current_app=self.admin_site.name,
+        )
+        return format_html('<a class="button" href="{}">Rotate Token</a>', url)
 
     def get_fields(self, request, obj=None):
         if obj is None:
@@ -80,12 +87,12 @@ class TokenAdmin(admin.ModelAdmin):
             "scopes",
             "key",
             "prefix",
-            "hint",
             "expires_at",
             "last_used_at",
             "revoked",
             "purged",
             "created_at",
+            "rotate_token_link",
         )
 
     def get_readonly_fields(self, request, obj=None):
@@ -107,6 +114,7 @@ class TokenAdmin(admin.ModelAdmin):
             scopes=form.cleaned_data.get("scopes"),
             expires_at=form.cleaned_data.get("expires_at"),
             token_type=form.cleaned_data.get("token_type"),
+            request=request,
         )
 
         # Keep Django admin add flow working against the persisted instance.
@@ -145,7 +153,12 @@ class TokenAdmin(admin.ModelAdmin):
                 "<path:object_id>/token-created/",
                 self.admin_site.admin_view(self.token_created_view),
                 name="keysmith_token_token_created",
-            )
+            ),
+            path(
+                "<path:object_id>/rotate/",
+                self.admin_site.admin_view(self.token_rotated_view),
+                name="keysmith_token_rotate",
+            ),
         ]
         return extra + urls
 
@@ -182,6 +195,40 @@ class TokenAdmin(admin.ModelAdmin):
         }
         return TemplateResponse(request, "admin/keysmith/token/token_created.html", context)
 
+    def token_rotated_view(self, request, object_id):
+        """Handle single-token rotation from the change form."""
+        token = self.get_object(request, object_id)
+        if token is None:
+            raise Http404("Token does not exist")
+
+        if not self.has_change_permission(request, obj=token):
+            raise Http404("Not allowed")
+
+        if token.revoked or token.purged:
+            messages.error(request, "Cannot rotate a revoked or purged token.")
+            change_url = reverse(
+                "admin:keysmith_token_change",
+                args=[token.pk],
+                current_app=self.admin_site.name,
+            )
+            return HttpResponseRedirect(change_url)
+
+        new_raw = rotate_token(token, request=request, actor=request.user)
+
+        session_key = f"{self._RAW_TOKEN_SESSION_PREFIX}{token.pk}"
+        request.session[session_key] = new_raw
+
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "original": token,
+            "token": token,
+            "raw_token": new_raw,
+            "title": "Token rotated",
+            "subtitle": "The old token value is now invalid.",
+        }
+        return TemplateResponse(request, "admin/keysmith/token/token_created.html", context)
+
     @admin.action(description="Revoke selected tokens")
     def revoke_selected_tokens(self, request, queryset):
         updated = 0
@@ -199,10 +246,26 @@ class TokenAdmin(admin.ModelAdmin):
         for token in queryset.iterator():
             if token.purged:
                 continue
-            revoke_token(token, purge=True, request=request, actor=request.user)
+            purge_token(token, request=request, actor=request.user)
             updated += 1
 
         self.message_user(request, f"Purged {updated} token(s).")
+
+    @admin.action(description="Rotate selected tokens")
+    def rotate_selected_tokens(self, request, queryset):
+        rotated = 0
+        skipped = 0
+        for token in queryset.iterator():
+            if token.revoked or token.purged:
+                skipped += 1
+                continue
+            rotate_token(token, request=request, actor=request.user)
+            rotated += 1
+
+        msg = f"Rotated {rotated} token(s)."
+        if skipped:
+            msg += f" Skipped {skipped} revoked/purged token(s)."
+        self.message_user(request, msg)
 
 
 @admin.register(TokenAuditLog)
@@ -228,7 +291,6 @@ class TokenAuditLogAdmin(admin.ModelAdmin):
         "ip_address",
         "user_agent",
         "token__prefix",
-        "token__hint",
     )
     readonly_fields = (
         "token",

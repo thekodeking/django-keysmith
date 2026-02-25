@@ -5,7 +5,6 @@ import pytest
 
 from keysmith.utils.tokens import (
     PublicToken,
-    build_hint,
     build_public_token,
     compute_crc,
     extract_prefix_and_secret,
@@ -103,7 +102,6 @@ class TestBuildPublicToken:
         assert isinstance(result, PublicToken)
         assert result.full_prefix == "tok_abc123"
         assert result.crc is not None
-        assert result.hint.startswith("h_")
 
     def test_token_format(self):
         """Token follows expected format: prefix_identifier:secretCRC."""
@@ -209,35 +207,3 @@ class TestExtractPrefixAndSecret:
         with pytest.raises(ValueError):
             extract_prefix_and_secret(tampered)
 
-
-class TestBuildHint:
-    """Test hint generation."""
-
-    def test_hint_format(self):
-        """Hint follows expected format."""
-        hint = build_hint(crc="123456")
-        assert hint.startswith("h_")
-
-    def test_hint_uses_crc_suffix(self):
-        """Hint uses suffix of CRC."""
-        hint = build_hint(crc="123456")
-        assert "56" in hint or hint.endswith("6")
-
-    def test_hint_with_empty_crc(self):
-        """Empty CRC produces empty hint."""
-        hint = build_hint(crc="")
-        assert hint == ""
-
-    def test_hint_respects_hint_length_setting(self):
-        """Hint length respects HINT_LENGTH setting."""
-        with patch("keysmith.utils.tokens.keysmith_settings") as mock_settings:
-            mock_settings.HINT_LENGTH = 10
-            hint = build_hint(crc="1234567890")
-            assert len(hint) <= 10
-
-    def test_hint_minimum_length(self):
-        """Hint has minimum length of 2."""
-        with patch("keysmith.utils.tokens.keysmith_settings") as mock_settings:
-            mock_settings.HINT_LENGTH = 1
-            hint = build_hint(crc="123456")
-            assert len(hint) >= 2
