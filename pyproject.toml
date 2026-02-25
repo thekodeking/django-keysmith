@@ -1,6 +1,6 @@
 [project]
 name = "django-keysmith"
-version = "0.1.0"
+version = "0.1.1"
 description = "A django application for API key management with rest-framework support"
 readme = "README.md"
 requires-python = ">=3.9"
