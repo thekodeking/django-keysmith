@@ -6,6 +6,8 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from keysmith.settings import keysmith_settings
+
 
 class AbstractToken(models.Model):
     """Abstract contract for token models used by Keysmith auth services."""
@@ -24,7 +26,7 @@ class AbstractToken(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="created_tokens",
+        related_name="%(app_label)s_%(class)s_created",
     )
 
     user = models.ForeignKey(
@@ -32,7 +34,7 @@ class AbstractToken(models.Model):
         null=True,
         blank=True,
         on_delete=models.CASCADE,
-        related_name="api_tokens",
+        related_name="%(app_label)s_%(class)s_owned",
     )
 
     token_type = models.CharField(
@@ -49,7 +51,7 @@ class AbstractToken(models.Model):
 
     key = models.CharField(max_length=256, unique=True)
 
-    prefix = models.CharField(max_length=12, db_index=True)
+    prefix = models.CharField(max_length=255, unique=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(null=True, blank=True)
@@ -116,11 +118,11 @@ class AbstractTokenAuditLog(models.Model):
     id = models.BigAutoField(primary_key=True)
 
     token = models.ForeignKey(
-        "keysmith.Token",
+        keysmith_settings.TOKEN_MODEL,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="audit_logs",
+        related_name="%(app_label)s_%(class)s_logs",
     )
 
     action = models.CharField(
@@ -166,6 +168,9 @@ class AbstractTokenAuditLog(models.Model):
             models.Index(fields=["token"]),
             models.Index(fields=["action"]),
             models.Index(fields=["created_at"]),
+            models.Index(fields=["ip_address"]),
+            models.Index(fields=["status_code"]),
+            models.Index(fields=["action", "created_at"]),
         ]
 
     def __str__(self) -> str:
