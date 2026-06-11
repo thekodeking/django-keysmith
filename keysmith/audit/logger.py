@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from keysmith.hooks import load_hook
 from keysmith.models.utils import get_audit_log_model
 from keysmith.settings import keysmith_settings
 
@@ -10,9 +11,10 @@ logger = logging.getLogger("keysmith.audit")
 
 
 def _get_ip_address(request) -> str | None:
-    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip() or None
+    if getattr(keysmith_settings, "TRUST_PROXIES", False):
+        forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+        if forwarded_for:
+            return forwarded_for.split(",")[0].strip() or None
 
     return request.META.get("REMOTE_ADDR")
 
@@ -40,7 +42,6 @@ def log_audit_event(
         return
 
     try:
-        AuditLog = get_audit_log_model()
         payload = (
             _request_context(request, status_code)
             if request
@@ -52,6 +53,20 @@ def log_audit_event(
                 "user_agent": None,
             }
         )
+
+        audit_log_hook = load_hook("AUDIT_LOG_HOOK")
+        if audit_log_hook is not None:
+            audit_log_hook(
+                action=action,
+                token=token,
+                request=request,
+                status_code=status_code,
+                extra=extra,
+                payload=payload,
+            )
+            return
+
+        AuditLog = get_audit_log_model()
         AuditLog.objects.create(
             token=token,
             action=action,
