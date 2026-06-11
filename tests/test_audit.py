@@ -172,8 +172,12 @@ class TestRequestContext:
 
         assert ip == "192.168.1.1"
 
-    def test_get_ip_address_from_x_forwarded_for(self):
-        """IP address extracted from X-Forwarded-For header."""
+    def test_get_ip_address_from_x_forwarded_for(self, settings):
+        """IP address extracted from X-Forwarded-For header when trusted."""
+        settings.KEYSMITH = {
+            **settings.KEYSMITH,
+            "TRUST_PROXIES": True,
+        }
         request = HttpRequest()
         request.META = {
             "HTTP_X_FORWARDED_FOR": "10.0.0.1, 192.168.1.1",
@@ -183,6 +187,22 @@ class TestRequestContext:
         ip = _get_ip_address(request)
 
         assert ip == "10.0.0.1"
+
+    def test_get_ip_address_ignores_x_forwarded_for_when_untrusted(self, settings):
+        """IP address from REMOTE_ADDR even when X-Forwarded-For is present if not trusted."""
+        settings.KEYSMITH = {
+            **settings.KEYSMITH,
+            "TRUST_PROXIES": False,
+        }
+        request = HttpRequest()
+        request.META = {
+            "HTTP_X_FORWARDED_FOR": "10.0.0.1, 192.168.1.1",
+            "REMOTE_ADDR": "192.168.1.1",
+        }
+
+        ip = _get_ip_address(request)
+
+        assert ip == "192.168.1.1"
 
     def test_get_ip_address_none_when_missing(self):
         """IP address is None when not available."""

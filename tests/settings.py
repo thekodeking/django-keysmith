@@ -1,5 +1,7 @@
 import importlib.util
+import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -52,6 +54,19 @@ DATABASES = {
         "NAME": ":memory:",
     }
 }
+
+db_url = os.environ.get("DATABASE_URL")
+if db_url:
+    url = urlparse(db_url)
+    if url.scheme in ("postgres", "postgresql"):
+        DATABASES["default"] = {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": url.path.lstrip("/"),
+            "USER": url.username,
+            "PASSWORD": url.password,
+            "HOST": url.hostname,
+            "PORT": url.port or 5432,
+        }
 
 LANGUAGE_CODE = "en-us"
 USE_I18N = True
