@@ -1,32 +1,157 @@
-/* Custom docs polish for readability */
+/*
+ * django-keysmith - documentation typography
+ * Aligns with Zensical / Material defaults; only tightens what the
+ * theme leaves oversized (tables, hero, cards, admonitions).
+ */
 
-.md-typeset h1,
-.md-typeset h2,
-.md-typeset h3 {
-  letter-spacing: 0.01em;
+/* ── Header: mono site name in navbar ───────────────────────── */
+
+.md-header__topic:first-child .md-ellipsis {
+  font-family: var(--md-code-font);
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
 }
+
+:root {
+  --ks-radius: 0.375rem;
+  --ks-line-height: 1.6;
+  --ks-table-cell-padding-y: 0.35rem;
+  --ks-table-cell-padding-x: 0.6rem;
+}
+
+/* ── Base prose ─────────────────────────────────────────────── */
 
 .md-typeset p,
 .md-typeset li {
-  line-height: 1.65;
+  line-height: var(--ks-line-height);
+}
+
+.md-typeset h1 {
+  font-size: 1.6em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.75em;
+}
+
+.md-typeset h2 {
+  font-size: 1.25em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-top: 1.75em;
+  margin-bottom: 0.5em;
+}
+
+.md-typeset h3 {
+  font-size: 1.05em;
+  margin-top: 1.5em;
+  margin-bottom: 0.4em;
+}
+
+.md-typeset hr {
+  margin: 1.5em 0;
+}
+
+.md-typeset pre,
+.md-typeset code {
+  font-size: 0.85em;
 }
 
 .md-typeset pre {
-  border-radius: 8px;
+  border-radius: var(--ks-radius);
 }
+
+.md-typeset code {
+  border-radius: 0.2rem;
+}
+
+/* ── Tables (theme default padding is very generous) ────────── */
+
+.md-typeset table:not([class]) {
+  font-size: 0.95em;
+  line-height: 1.45;
+  display: table;
+  width: 100%;
+  margin: 0.75em 0 1em;
+}
+
+.md-typeset table:not([class]) th {
+  font-weight: 600;
+  padding: var(--ks-table-cell-padding-y) var(--ks-table-cell-padding-x);
+}
+
+.md-typeset table:not([class]) td {
+  padding: var(--ks-table-cell-padding-y) var(--ks-table-cell-padding-x);
+  vertical-align: top;
+}
+
+.md-typeset table:not([class]) th code,
+.md-typeset table:not([class]) td code {
+  font-size: 0.9em;
+}
+
+/* ── Admonitions & tabs ───────────────────────────────────── */
 
 .md-typeset .admonition,
 .md-typeset details {
-  border-radius: 8px;
+  font-size: 0.95em;
+  border-radius: var(--ks-radius);
+  margin: 1em 0;
 }
 
-/* Tables felt oversized in this theme; keep them compact and readable. */
-.md-typeset table:not([class]) {
-  font-size: 0.84rem;
+.md-typeset .admonition .admonition-title,
+.md-typeset details summary {
+  font-size: 0.95em;
+}
+
+.md-typeset .tabbed-set {
+  font-size: inherit;
+}
+
+.md-typeset .tabbed-content {
+  font-size: inherit;
+}
+
+/* ── Home page: lead + feature cards ────────────────────────── */
+
+.ks-lead {
+  margin: 0 0 1.25rem;
+  padding: 0;
+  font-size: inherit;
+  line-height: var(--ks-line-height);
+  color: var(--md-default-fg-color--light);
+}
+
+.ks-lead strong {
+  color: var(--md-default-fg-color);
+  font-weight: 600;
+}
+
+.ks-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.65rem;
+  margin: 1.25rem 0 1.75rem;
+}
+
+.ks-feature {
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--ks-radius);
+  border: 1px solid var(--md-default-fg-color--lightest, #e0e0e0);
+  font-size: 0.95em;
   line-height: 1.45;
 }
 
-.md-typeset table:not([class]) th,
-.md-typeset table:not([class]) td {
-  padding: 0.5rem 0.625rem;
+.ks-feature p {
+  margin: 0;
+  font-size: inherit;
+  line-height: inherit;
 }
+
+.ks-feature strong {
+  display: block;
+  font-size: inherit;
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+  color: var(--md-default-fg-color);
+}
+

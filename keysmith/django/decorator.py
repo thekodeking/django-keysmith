@@ -23,7 +23,7 @@ def keysmith_required(
             # explicitly requires token authentication.
             request._keysmith_auth_required = not allow_anonymous
 
-            if getattr(request, "keysmith_user", None):
+            if getattr(request, "keysmith_token", None):
                 return func(request, *args, **kwargs)
 
             if getattr(request, "keysmith_auth_error", None):

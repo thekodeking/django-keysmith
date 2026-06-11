@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from datetime import timedelta
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from keysmith.audit.logger import log_audit_event
@@ -67,20 +67,33 @@ def _extract_scope_codenames(scopes: Iterable) -> set[str]:
 
 def _resolve_permissions_by_codename(scope_codenames: set[str]):
     from django.contrib.auth.models import Permission
+    from django.db.models import Q
 
     if not scope_codenames:
         return Permission.objects.none()
 
-    permissions = Permission.objects.filter(codename__in=scope_codenames)
-    found = set(permissions.values_list("codename", flat=True))
-    missing = scope_codenames - found
+    q_filter = Q()
+    for scope in scope_codenames:
+        if "." in scope:
+            app_label, codename = scope.split(".", 1)
+            q_filter |= Q(content_type__app_label=app_label, codename=codename)
+        else:
+            q_filter |= Q(codename=scope)
+
+    permissions = Permission.objects.filter(q_filter).select_related("content_type")
+
+    found_scopes = set()
+    for p in permissions:
+        found_scopes.add(f"{p.content_type.app_label}.{p.codename}")
+        found_scopes.add(p.codename)
+
+    missing = scope_codenames - found_scopes
     if missing:
         missing_values = ", ".join(sorted(missing))
         raise ValueError(f"Scope permissions were not found: {missing_values}")
     return permissions
 
 
-@transaction.atomic
 def create_token(
     *,
     name: str,
@@ -106,16 +119,6 @@ def create_token(
     if token_type is None:
         token_type = Token.TokenType.USER
     hasher: BaseTokenHasher = get_hasher()
-    secret: str = generate_raw_secret(keysmith_settings.TOKEN_SECRET_LENGTH)
-    full_prefix: str = _generate_unique_prefix()
-
-    namespace, identifier = full_prefix.rsplit("_", 1)
-    pt: PublicToken = build_public_token(
-        secret=secret,
-        identifier=identifier,
-        namespace=namespace,
-    )
-    hashed: str = hasher.hash(secret)
 
     scopes_to_assign = scopes
     if scopes_to_assign is None:
@@ -128,19 +131,40 @@ def create_token(
         requested_scope_codenames = _extract_scope_codenames(scopes_to_assign)
         _validate_available_scopes(requested_scope_codenames)
 
-    token = Token.objects.create(
-        name=name,
-        description=description,
-        created_by=created_by,
-        user=user,
-        token_type=token_type,
-        key=hashed,
-        prefix=pt.full_prefix,
-        expires_at=expires_at or _default_expiry(),
-    )
+    for attempt in range(5):
+        secret: str = generate_raw_secret(keysmith_settings.TOKEN_SECRET_LENGTH)
+        full_prefix: str = _generate_unique_prefix()
 
-    if scopes_to_assign is not None:
-        token.scopes.set(scopes_to_assign)
+        namespace, identifier = full_prefix.rsplit("_", 1)
+        pt: PublicToken = build_public_token(
+            secret=secret,
+            identifier=identifier,
+            namespace=namespace,
+        )
+        hashed: str = hasher.hash(secret)
+
+        try:
+            with transaction.atomic():
+                token = Token.objects.create(
+                    name=name,
+                    description=description,
+                    created_by=created_by,
+                    user=user,
+                    token_type=token_type,
+                    key=hashed,
+                    prefix=pt.full_prefix,
+                    expires_at=expires_at or _default_expiry(),
+                )
+
+                if scopes_to_assign is not None:
+                    token.scopes.set(scopes_to_assign)
+        except IntegrityError:
+            if attempt == 4:
+                raise
+            continue
+        break
+    else:
+        raise RuntimeError("Failed to generate unique token prefix")
 
     log_audit_event(
         action="created",

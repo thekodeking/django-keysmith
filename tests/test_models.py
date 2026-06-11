@@ -244,7 +244,7 @@ class TestTokenAuditLogModel:
             status_code=200,
         )
 
-        log = token.audit_logs.filter(
+        log = token.keysmith_tokenauditlog_logs.filter(
             action=TokenAuditLog.ACTION_AUTH_SUCCESS, path="/api/test/"
         ).first()
         assert log is not None

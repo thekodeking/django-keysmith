@@ -197,6 +197,9 @@ Common options:
 | `ALLOW_QUERY_PARAM` | `False` | Accept token via query string |
 | `QUERY_PARAM_NAME` | `keysmith_token` | Query parameter name |
 | `ENABLE_AUDIT_LOGGING` | `True` | Enable audit row creation |
+| `AUDIT_LOG_HOOK` | `None` | Callable: replaces default audit DB write |
+| `AUDIT_LOG_RETENTION_DAYS` | `None` | Default for `prune_audit_logs` command |
+| `TRUST_PROXIES` | `False` | Read IP from `X-Forwarded-For` |
 | `TOKEN_PREFIX` | `tok` | Prefix namespace |
 | `TOKEN_SECRET_LENGTH` | `32` | Generated secret length |
 | `AVAILABLE_SCOPES` | `[]` | Allowed permission codenames |

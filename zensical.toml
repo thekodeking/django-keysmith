@@ -1,43 +1,46 @@
 [project]
-site_name = "Django Keysmith"
-site_description = "Production-ready API token management for Django"
+site_name = "django-keysmith"
+site_description = "Hashed API tokens with lifecycle management for Django"
 site_author = "thekodeking"
 site_url = "https://thekodeking.github.io/django-keysmith/"
 docs_dir = "docs"
 repo_name = "thekodeking/django-keysmith"
 repo_url = "https://github.com/thekodeking/django-keysmith"
 edit_uri = "edit/main/docs"
-copyright = """
-Copyright &copy; 2026 thekodeking
-"""
+copyright = "Copyright &copy; 2026 thekodeking"
 
 nav = [
   { Home = "index.md" },
-  { "Getting Started" = [
-    { Installation = "installation.md" },
-    { "Quick Start" = "quickstart.md" },
-    { Configuration = "configuration.md" },
+  { "Getting started" = [
+    { Install = "getting-started/install.md" },
+    { Tutorial = "getting-started/tutorial.md" },
   ] },
-  { "User Guide" = [
-    { "Token Management" = "guide/token-management.md" },
-    { Authentication = "guide/authentication.md" },
-    { "Permissions and Scopes" = "guide/permissions.md" },
-    { "Audit Logging" = "guide/audit-logging.md" },
+  { Topics = [
+    { Tokens = "topics/tokens.md" },
+    { Authentication = "topics/authentication.md" },
+    { Scopes = "topics/scopes.md" },
+    { "Audit logs" = "topics/audit.md" },
+    { Settings = "topics/settings.md" },
+    { Admin = "topics/admin.md" },
   ] },
-  { Integration = [
-    { "Django REST Framework" = "integration/drf.md" },
-    { "Plain Django" = "integration/plain-django.md" },
+  { Integrations = [
+    { Django = "integrations/django.md" },
+    { "Django REST Framework" = "integrations/drf.md" },
   ] },
-  { "API Reference" = [
-    { Services = "api/services.md" },
-    { Models = "api/models.md" },
-    { Authentication = "api/authentication.md" },
-    { Permissions = "api/permissions.md" },
+  { Reference = [
+    { Services = "reference/services.md" },
+    { Models = "reference/models.md" },
+    { Authentication = "reference/authentication.md" },
+    { Permissions = "reference/permissions.md" },
+    { Commands = "reference/commands.md" },
   ] },
-  { Development = [
-    { Contributing = "development.md" },
-    { "Security Model" = "security-model.md" },
-    { Changelog = "changelog.md" },
+  { Extending = [
+    { Customization = "extending/customization.md" },
+    { Security = "extending/security.md" },
+  ] },
+  { Project = [
+    { Contributing = "project/contributing.md" },
+    { Changelog = "project/changelog.md" },
   ] },
 ]
 
@@ -50,19 +53,29 @@ features = [
   "navigation.instant",
   "navigation.tracking",
   "navigation.sections",
+  "navigation.expand",
   "navigation.top",
   "navigation.footer",
+  "navigation.indexes",
+  "toc.follow",
   "search.suggest",
   "search.highlight",
   "content.code.copy",
   "content.code.annotate",
+  "content.tabs.link",
 ]
+
+[project.theme.font]
+code = "JetBrains Mono"
+
+[project.theme.icon]
+logo = "lucide/key"
 
 [[project.theme.palette]]
 media = "(prefers-color-scheme: light)"
 scheme = "default"
-primary = "indigo"
-accent = "indigo"
+primary = "teal"
+accent = "teal"
 
 [project.theme.palette.toggle]
 icon = "material/brightness-7"
@@ -71,8 +84,8 @@ name = "Switch to dark mode"
 [[project.theme.palette]]
 media = "(prefers-color-scheme: dark)"
 scheme = "slate"
-primary = "indigo"
-accent = "indigo"
+primary = "teal"
+accent = "teal"
 
 [project.theme.palette.toggle]
 icon = "material/brightness-4"
@@ -83,7 +96,7 @@ version = { provider = "mike" }
 
 [[project.extra.social]]
 icon = "fontawesome/brands/github"
-link = "https://github.com/thekodeking"
+link = "https://github.com/thekodeking/django-keysmith"
 
 [[project.extra.social]]
 icon = "fontawesome/brands/python"
