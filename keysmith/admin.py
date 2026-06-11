@@ -4,8 +4,11 @@ from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
 
-from keysmith.models import Token, TokenAuditLog
+from keysmith.models.utils import get_audit_log_model, get_token_model
 from keysmith.services.tokens import create_token, purge_token, revoke_token, rotate_token
+
+Token = get_token_model()
+TokenAuditLog = get_audit_log_model()
 
 
 @admin.register(Token)
@@ -59,8 +62,9 @@ class TokenAdmin(admin.ModelAdmin):
     def rotate_token_link(self, obj):
         if not obj.pk or obj.revoked or obj.purged:
             return "-"
+        info = (self.model._meta.app_label, self.model._meta.model_name)
         url = reverse(
-            "admin:keysmith_token_rotate",
+            f"admin:{info[0]}_{info[1]}_rotate",
             args=[obj.pk],
             current_app=self.admin_site.name,
         )
@@ -139,8 +143,9 @@ class TokenAdmin(admin.ModelAdmin):
         session_key = f"{self._RAW_TOKEN_SESSION_PREFIX}{token.pk}"
         request.session[session_key] = raw_token
 
+        info = (self.model._meta.app_label, self.model._meta.model_name)
         token_created_url = reverse(
-            "admin:keysmith_token_token_created",
+            f"admin:{info[0]}_{info[1]}_token_created",
             args=[token.pk],
             current_app=self.admin_site.name,
         )
@@ -148,16 +153,17 @@ class TokenAdmin(admin.ModelAdmin):
 
     def get_urls(self):
         urls = super().get_urls()
+        info = (self.model._meta.app_label, self.model._meta.model_name)
         extra = [
             path(
                 "<path:object_id>/token-created/",
                 self.admin_site.admin_view(self.token_created_view),
-                name="keysmith_token_token_created",
+                name=f"{info[0]}_{info[1]}_token_created",
             ),
             path(
                 "<path:object_id>/rotate/",
                 self.admin_site.admin_view(self.token_rotated_view),
-                name="keysmith_token_rotate",
+                name=f"{info[0]}_{info[1]}_rotate",
             ),
         ]
         return extra + urls
@@ -178,8 +184,9 @@ class TokenAdmin(admin.ModelAdmin):
                 request,
                 "The token value is only shown once and is no longer available.",
             )
+            info = (self.model._meta.app_label, self.model._meta.model_name)
             change_url = reverse(
-                "admin:keysmith_token_change",
+                f"admin:{info[0]}_{info[1]}_change",
                 args=[token.pk],
                 current_app=self.admin_site.name,
             )
@@ -206,8 +213,9 @@ class TokenAdmin(admin.ModelAdmin):
 
         if token.revoked or token.purged:
             messages.error(request, "Cannot rotate a revoked or purged token.")
+            info = (self.model._meta.app_label, self.model._meta.model_name)
             change_url = reverse(
-                "admin:keysmith_token_change",
+                f"admin:{info[0]}_{info[1]}_change",
                 args=[token.pk],
                 current_app=self.admin_site.name,
             )

@@ -106,3 +106,65 @@ def check_sqlite_concurrency(app_configs, **kwargs):
             )
         ]
     return []
+
+
+@register()
+def check_keysmith_settings_validity(app_configs, **kwargs):
+    """Ensure configurable settings are valid and safe."""
+    from django.conf import settings
+
+    from keysmith.settings import KEYSMITH_DEFAULTS, keysmith_settings
+
+    errors = []
+
+    # 1. Prefix length check
+    token_prefix = getattr(keysmith_settings, "TOKEN_PREFIX", "")
+    if not isinstance(token_prefix, str) or not token_prefix:
+        errors.append(
+            Error(
+                "TOKEN_PREFIX must be a non-empty string.",
+                id="keysmith.E004",
+            )
+        )
+    elif len(token_prefix) > 246:
+        errors.append(
+            Error(
+                f"TOKEN_PREFIX '{token_prefix}' is too long (max 246 characters) "
+                f"to fit in the database prefix field with the generated identifier.",
+                id="keysmith.E005",
+            )
+        )
+
+    # 2. Secret length check
+    secret_length = getattr(keysmith_settings, "TOKEN_SECRET_LENGTH", 0)
+    if not isinstance(secret_length, int) or secret_length < 16:
+        errors.append(
+            Error(
+                "TOKEN_SECRET_LENGTH must be an integer and at least 16 characters for security.",
+                id="keysmith.E006",
+            )
+        )
+
+    # 3. Hash iterations check
+    hash_iterations = getattr(keysmith_settings, "HASH_ITERATIONS", 0)
+    if not isinstance(hash_iterations, int) or hash_iterations < 10_000:
+        errors.append(
+            Error(
+                "HASH_ITERATIONS must be an integer and at least 10,000 for safety.",
+                id="keysmith.E007",
+            )
+        )
+
+    # 4. Check for invalid or unknown keys in settings.KEYSMITH setting dict
+    user_settings = getattr(settings, "KEYSMITH", {})
+    if isinstance(user_settings, dict):
+        for key in user_settings:
+            if key not in KEYSMITH_DEFAULTS:
+                errors.append(
+                    Warning(
+                        f"Found invalid or unknown setting in KEYSMITH configuration: '{key}'.",
+                        id="keysmith.W002",
+                    )
+                )
+
+    return errors
