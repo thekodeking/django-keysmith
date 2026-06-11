@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("keysmith", "0002_remove_token_hint_and_add_created_action"),
     ]

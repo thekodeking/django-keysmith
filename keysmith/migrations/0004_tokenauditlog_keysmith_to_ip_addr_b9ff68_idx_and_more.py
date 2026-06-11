@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("keysmith", "0003_alter_token_prefix"),
     ]
@@ -12,15 +11,11 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddIndex(
             model_name="tokenauditlog",
-            index=models.Index(
-                fields=["ip_address"], name="keysmith_to_ip_addr_b9ff68_idx"
-            ),
+            index=models.Index(fields=["ip_address"], name="keysmith_to_ip_addr_b9ff68_idx"),
         ),
         migrations.AddIndex(
             model_name="tokenauditlog",
-            index=models.Index(
-                fields=["status_code"], name="keysmith_to_status__3e40dd_idx"
-            ),
+            index=models.Index(fields=["status_code"], name="keysmith_to_status__3e40dd_idx"),
         ),
         migrations.AddIndex(
             model_name="tokenauditlog",
