@@ -1,9 +1,14 @@
+from unittest.mock import patch
+
+from django.db import connections
+
 from keysmith.checks import check_keysmith_settings_validity, check_sqlite_concurrency
 
 
 def test_sqlite_concurrency_check_warns_on_sqlite_default_db():
     """System check emits keysmith.W001 for default sqlite database."""
-    warnings = check_sqlite_concurrency(app_configs=None)
+    with patch.object(connections["default"], "vendor", "sqlite"):
+        warnings = check_sqlite_concurrency(app_configs=None)
     warning = next((item for item in warnings if item.id == "keysmith.W001"), None)
 
     assert warning is not None
