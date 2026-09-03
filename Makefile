@@ -67,6 +67,8 @@ migrate:
 docs-serve:
 	uv run --extra docs zensical serve
 
+docs-server: docs-serve
+
 docs-build:
 	uv run --extra docs zensical build
 

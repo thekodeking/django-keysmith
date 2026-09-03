@@ -1,144 +1,97 @@
-# Settings
+# Configuration & Settings
 
-All configuration lives in a single `KEYSMITH` dictionary in `settings.py`. Unspecified keys use library defaults. Unknown keys trigger warning `keysmith.W002`.
+All configuration options are defined in your Django `settings.py` under the `KEYSMITH` dictionary.
 
 ```python
+# settings.py
+
 KEYSMITH = {
+    "HASH_BACKEND": "keysmith.hashers.PBKDF2SHA512TokenHasher",
     "DEFAULT_EXPIRY_DAYS": 90,
-    "ENABLE_AUDIT_LOGGING": True,
+    "HEADER_NAME": "HTTP_X_KEYSMITH_TOKEN",
+    "LAST_USED_UPDATE_INTERVAL": 60,
 }
 ```
 
-Settings reload automatically when Django's `setting_changed` signal fires (useful in tests).
+---
 
-Access defaults programmatically:
+## 1. Token Hashing & Cryptography
+
+| Setting | Type | Default | Description |
+| :--- | :---: | :--- | :--- |
+| `HASH_BACKEND` | `str` | `"keysmith.hashers.PBKDF2SHA512TokenHasher"` | Dotted path to the hasher class. Built-in options: `PBKDF2SHA512TokenHasher`, `SHA256TokenHasher`, `HMACSHA256TokenHasher`. |
+| `HASH_ITERATIONS` | `int` | `100_000` | Number of PBKDF2 stretching rounds (minimum 10,000 enforced by system checks). Only used when `HASH_BACKEND` is PBKDF2. |
+| `TOKEN_PREFIX` | `str` | `"tok"` | Leading prefix for generated tokens (e.g. `tok_...`). Max 16 characters. |
+| `TOKEN_SECRET_LENGTH` | `int` | `32` | Character length of the random secret (minimum 16 enforced by system checks). |
+
+---
+
+## 2. Authentication & Headers
+
+| Setting | Type | Default | Description |
+| :--- | :---: | :--- | :--- |
+| `AUTH_HEADER_TYPES` | `tuple` | `("Bearer", "Token")` | Accepted prefixes in the HTTP `Authorization` header. |
+| `WWW_AUTHENTICATE_SCHEME` | `str` | `"Bearer"` | Challenge scheme emitted in `WWW-Authenticate` on 401 Unauthorized per RFC 9110. |
+| `HEADER_NAME` | `str` | `"HTTP_X_KEYSMITH_TOKEN"` | Alternative custom header name in Django's `request.META` format (`HTTP_<HEADER>`). |
+| `ALLOW_QUERY_PARAM` | `bool` | `False` | Whether to accept tokens via URL query string (useful for constrained webhooks). |
+| `QUERY_PARAM_NAME` | `str` | `"keysmith_token"` | Name of the query parameter when `ALLOW_QUERY_PARAM = True`. |
+
+---
+
+## 3. Performance & Usage Tracking
+
+| Setting | Type | Default | Description |
+| :--- | :---: | :--- | :--- |
+| `LAST_USED_UPDATE_INTERVAL` | `int` | `60` | Minimum seconds between database writes to `last_used_at`. Set to `0` to update on every single request. |
+| `DEFAULT_EXPIRY_DAYS` | `int` | `90` | Number of days before newly created tokens expire if no custom `expires_at` is provided. |
+
+---
+
+## 4. Client IP & Proxies
+
+| Setting | Type | Default | Description |
+| :--- | :---: | :--- | :--- |
+| `CLIENT_IP_HEADER` | `str | None` | `None` | Custom header for client IP (e.g. `"HTTP_CF_CONNECTING_IP"`, `"HTTP_X_REAL_IP"`). |
+| `CLIENT_IP_HOOK` | `callable | str` | `None` | Custom callable or dotted path `hook(request) -> str` to resolve client IP. |
+| `TRUST_PROXIES` | `bool` | `False` | When `True`, reads client IP from `HTTP_X_FORWARDED_FOR`. Only enable behind trusted reverse proxies. |
+
+---
+
+## 5. Scopes & Model Customization
+
+| Setting | Type | Default | Description |
+| :--- | :---: | :--- | :--- |
+| `AVAILABLE_SCOPES` | `list[str]` | `[]` | List of Django permission strings (`"<app_label>.<codename>"`) allowed for tokens. |
+| `DEFAULT_SCOPES` | `list[str]` | `[]` | Scopes automatically assigned to newly issued tokens if none are specified. |
+| `TOKEN_MODEL` | `str` | `"keysmith.Token"` | Swappable model path if extending the base token model with custom fields. |
+
+---
+
+## 6. Custom Callables & Hooks
+
+All hooks accept either a dotted import string (e.g. `"myapp.hooks.my_hook"`) or a **direct Python callable**:
+
+| Hook | Signature | Description |
+| :--- | :--- | :--- |
+| `AUDIT_LOG_HOOK` | `hook(event_data: dict) -> None` | Invoked after every audit event is generated. Perfect for Datadog, Sentry, or SIEM pipelines. |
+| `RATE_LIMIT_HOOK` | `hook(request, raw_token=None) -> None` | Custom rate limit checker for Django middleware views. Raise an exception or return a response if throttled. |
+| `DRF_THROTTLE_HOOK` | `hook(request, token=None) -> None` | Custom throttle hook invoked inside `KeysmithAuthentication`. |
+| `CLIENT_IP_HOOK` | `hook(request) -> str | None` | Resolves the client IP address from the request object. |
+
+---
+
+## 7. Custom Error Messages
+
+Customize human-facing error messages returned on authentication failures:
 
 ```python
-from keysmith.settings import KEYSMITH_DEFAULTS, keysmith_settings
-```
+# settings.py
 
----
-
-## Hashing {#hashing}
-
-| Key | Default | Description |
-| --- | --- | --- |
-| `HASH_BACKEND` | `keysmith.hashers.PBKDF2SHA512TokenHasher` | Dotted path to hasher class (also supports `keysmith.hashers.SHA256TokenHasher` and `keysmith.hashers.HMACSHA256TokenHasher`) |
-| `HASH_ITERATIONS` | `100_000` | PBKDF2 iterations (minimum 10,000; only used with PBKDF2) |
-
----
-
-## Token generation {#token-generation}
-
-| Key | Default | Description |
-| --- | --- | --- |
-| `TOKEN_PREFIX` | `"tok"` | Namespace in public tokens (max 246 chars) |
-| `TOKEN_SECRET_LENGTH` | `32` | Secret length (minimum 16) |
-| `DEFAULT_EXPIRY_DAYS` | `90` | Default lifetime in days. Falsy value → no default expiry. |
-
----
-
-## Request authentication {#request-authentication}
-
-| Key | Default | Description |
-| --- | --- | --- |
-| `HEADER_NAME` | `HTTP_X_KEYSMITH_TOKEN` | `request.META` key (= `X-KEYSMITH-TOKEN` header) |
-| `AUTH_HEADER_TYPES` | `("Bearer", "Token")` | Accepted schemes in `Authorization` header |
-| `WWW_AUTHENTICATE_SCHEME` | `"Bearer"` | Challenge scheme in `WWW-Authenticate` header (RFC 9110) |
-| `ALLOW_QUERY_PARAM` | `False` | Accept token via query string |
-| `QUERY_PARAM_NAME` | `keysmith_token` | Query parameter name |
-| `LAST_USED_UPDATE_INTERVAL` | `60` | Minimum seconds between database writes to `last_used_at` (0 = update every request) |
-| `TRUST_PROXIES` | `False` | Read client IP from `X-Forwarded-For` |
-| `CLIENT_IP_HEADER` | `None` | Custom header for client IP (e.g. `HTTP_X_REAL_IP`, `HTTP_CF_CONNECTING_IP`) |
-| `CLIENT_IP_HOOK` | `None` | Callable or dotted string resolving client IP |
-
----
-
-## Scopes {#scopes}
-
-| Key | Default | Description |
-| --- | --- | --- |
-| `AVAILABLE_SCOPES` | `[]` | Allowlist of codenames. Empty = no restriction. |
-| `DEFAULT_SCOPES` | `[]` | Applied when `create_token(scopes=None)` |
-
----
-
-## Models {#models}
-
-| Key | Default | Description |
-| --- | --- | --- |
-| `TOKEN_MODEL` | `keysmith.Token` | Swappable token model |
-| `AUDIT_LOG_MODEL` | `keysmith.TokenAuditLog` | Swappable audit model |
-
----
-
-## Audit logging {#audit-logging}
-
-| Key | Default | Description |
-| --- | --- | --- |
-| `ENABLE_AUDIT_LOGGING` | `True` | Master switch |
-| `AUDIT_LOG_HOOK` | `None` | Callable replacing DB write |
-| `AUDIT_LOG_RETENTION_DAYS` | `None` | Default for `prune_audit_logs` |
-
----
-
-## Hooks {#hooks}
-
-| Key | Default | Signature |
-| --- | --- | --- |
-| `RATE_LIMIT_HOOK` | `None` | `hook(request, raw_token=None)` |
-| `DRF_THROTTLE_HOOK` | `None` | `hook(request, token=None)` |
-| `CLIENT_IP_HOOK` | `None` | `hook(request) -> str` |
-
----
-
-## Error messages {#error-messages}
-
-| Key | Default | Description |
-| --- | --- | --- |
-| `DEFAULT_ERROR_MESSAGES` | See below | User-facing strings (lazy-translated) |
-
-Built-in message keys:
-
-| Key | Default text |
-| --- | --- |
-| `missing_token` | Authentication credentials were not provided. |
-| `invalid_token` | Your session has expired or the token is invalid. |
-| `insufficient_scope` | You do not have permission to perform this action. |
-| `rate_limited` | Too many authentication attempts. Try again later. |
-
-Override individual keys - unspecified keys keep their defaults:
-
-```python
 KEYSMITH = {
     "DEFAULT_ERROR_MESSAGES": {
-        "invalid_token": "API token is invalid or expired.",
-    },
+        "invalid_token": "The API key provided is malformed or invalid.",
+        "expired_token": "This API key has expired. Please regenerate your key in settings.",
+        "revoked_token": "This API key has been deactivated by an administrator.",
+    }
 }
 ```
-
----
-
-## Production example
-
-```python
-KEYSMITH = {
-    "HASH_ITERATIONS": 150_000,
-    "DEFAULT_EXPIRY_DAYS": 60,
-    "HEADER_NAME": "HTTP_X_API_TOKEN",
-    "ALLOW_QUERY_PARAM": False,
-    "ENABLE_AUDIT_LOGGING": True,
-    "AUDIT_LOG_RETENTION_DAYS": 90,
-    "TRUST_PROXIES": True,
-    "TOKEN_PREFIX": "api",
-    "TOKEN_SECRET_LENGTH": 40,
-    "AVAILABLE_SCOPES": ["read", "write", "admin"],
-    "DEFAULT_ERROR_MESSAGES": {
-        "invalid_token": "API token is invalid or expired.",
-    },
-}
-```
-
----
-
-**See also:** [Customization](../extending/customization.md) · [Security](../extending/security.md)

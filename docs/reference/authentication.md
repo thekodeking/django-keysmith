@@ -1,131 +1,94 @@
-# Authentication
+# Authentication API Reference
+
+Technical reference for authentication functions, middleware, decorators, and exceptions.
 
 ---
 
 ## `authenticate_token`
 
+Module: `keysmith.auth.base`
+
 ```python
 from keysmith.auth.base import authenticate_token
 
-authenticate_token(raw_token: str) -> Token
+token = authenticate_token(raw_token: str) -> Token
 ```
 
-**Stages:**
+### Execution Steps
 
-1. Non-empty check
-2. Parse public token + CRC verification
-3. `SELECT … FOR UPDATE` by `prefix`
-4. `revoked` / `purged` / `is_expired` checks
-5. Hash verification via configured `HASH_BACKEND`
-6. `mark_token_used()`
+1. **Format & Non-Empty Check**: Ensures token string follows `<prefix>:<secret>` convention.
+2. **CRC32 Checksum Validation**: Computes and validates the checksum in memory. Fails fast with zero database overhead if forged or malformed.
+3. **Optimized DB Read**: Queries `Token.objects.select_related("user").prefetch_related("scopes").get(prefix=prefix)`. No row locks (`select_for_update`) are acquired.
+4. **Lifecycle State Checks**: Validates `token.revoked is False`, `token.purged is False`, and `token.expires_at > timezone.now()`.
+5. **Constant-Time Hash Verification**: Verifies `hasher.verify(secret, token.key)` using timing-safe comparisons.
+6. **Debounced Activity Update**: Calls `mark_token_used()`, writing to the database only if `LAST_USED_UPDATE_INTERVAL` has elapsed.
 
-**Exceptions** (all inherit `TokenAuthError`):
+### Exceptions Raised
+
+All authentication exceptions inherit from `keysmith.auth.exceptions.TokenAuthError`:
 
 ```python
-from keysmith.auth.exceptions import InvalidToken, ExpiredToken, RevokedToken
+from keysmith.auth.exceptions import (
+    TokenAuthError,
+    InvalidToken,
+    ExpiredToken,
+    RevokedToken,
+)
 ```
-
----
-
-## `get_message`
-
-```python
-from keysmith.auth.utils import get_message
-
-get_message(key: str, *, default: str | None = None) -> str
-```
-
-Returns a string from `DEFAULT_ERROR_MESSAGES`. Keys: `missing_token`, `invalid_token`, `insufficient_scope`, `rate_limited`.
 
 ---
 
 ## `KeysmithAuthenticationMiddleware`
 
+Module: `keysmith.django.middleware`
+
 ```python
 from keysmith.django.middleware import KeysmithAuthenticationMiddleware
 ```
 
-**Sets on request:**
+Extracts credentials from incoming requests and attaches diagnostic attributes to the `request` object.
 
-| Attribute | When |
-| --- | --- |
-| `keysmith_token` | Successful auth |
-| `keysmith_user` | `token.user` if set |
-| `keysmith_auth_error` | On `TokenAuthError` |
-| `_keysmith_auth_required` | Set by `@keysmith_required` |
+### Request Context Attributes Set
 
-**Hooks:** `RATE_LIMIT_HOOK` before auth.
-
-**Audit:** post-response `auth_success` / `auth_failed` for `@keysmith_required` views.
+| Attribute | When Populated | Description |
+| :--- | :--- | :--- |
+| `request.keysmith_token` | Successful authentication | The verified `Token` instance. |
+| `request.keysmith_user` | Successful authentication | Linked Django `User` object (or `None` for system tokens). |
+| `request.keysmith_auth_error` | Authentication failure | Contains the `TokenAuthError` exception instance. |
 
 ---
 
 ## `keysmith_required`
 
+Module: `keysmith.django.decorator`
+
+Decorator to enforce authentication on Django function-based views.
+
 ```python
 from keysmith.django.decorator import keysmith_required
-```
 
-```python
 @keysmith_required
-def view(request): ...
-
-@keysmith_required(allow_anonymous=False, missing_message=None, invalid_message=None)
-def view(request): ...
+def my_api_view(request):
+    ...
 ```
 
-Returns `HttpResponseUnauthorized` (401) on failure.
-
----
-
-## `HttpResponseUnauthorized`
-
-```python
-from keysmith.django.http import HttpResponseUnauthorized
-```
-
-Subclass of `HttpResponse` with `status_code = 401`.
+If the request lacks a token or the token is invalid/expired/revoked, the decorator halts execution and returns an HTTP `401 Unauthorized` JSON response.
 
 ---
 
 ## `KeysmithAuthentication`
 
+Module: `keysmith.drf.auth`
+
+Django REST Framework authentication class.
+
 ```python
 from keysmith.drf.auth import KeysmithAuthentication
 ```
 
-DRF `BaseAuthentication` subclass.
+### Behavior
 
-| Input | Result |
-| --- | --- |
-| No token | `None` |
-| `TokenAuthError` | `AuthenticationFailed` |
-| `Throttled` from hook | Re-raised after audit |
-| Success | `(user, token)` |
-
-Reads header via `request.headers` (converts `HTTP_X_KEYSMITH_TOKEN` → `X-KEYSMITH-TOKEN`).
-
-Sets `_keysmith_skip_middleware_audit` on underlying Django request.
-
----
-
-## Token utilities
-
-Module: `keysmith.utils.tokens`
-
-```python
-from keysmith.utils.tokens import (
-    PublicToken,
-    build_public_token,
-    compute_crc,
-    extract_prefix_and_secret,
-    generate_raw_secret,
-)
-```
-
-| Function | Purpose |
-| --- | --- |
-| `build_public_token(namespace, identifier, secret)` | Build `{ns}_{id}:{secret}{crc}` |
-| `extract_prefix_and_secret(public_token)` | Parse and validate; raises `ValueError` |
-| `generate_raw_secret(length=32)` | Cryptographic alphanumeric string |
-| `compute_crc(value, crc_digits=6)` | CRC32 checksum, zero-padded |
+- Reads credentials from `Authorization: Bearer <token>`, `Authorization: Token <token>`, or configured `HEADER_NAME`.
+- On success: Returns `(token.user, token)` tuple where `request.user` is the linked user and `request.auth` is the `Token` instance.
+- On error: Raises DRF `AuthenticationFailed` (HTTP 401).
+- Emits RFC 9110 challenge: `WWW-Authenticate: Bearer realm="api"`.

@@ -1,119 +1,137 @@
-# Audit logs
+# Audit Logging & Client IP Tracking
 
-Keysmith writes an audit row for authentication attempts and token lifecycle changes. Use these records for incident response, compliance, and debugging access failures.
-
----
-
-## Logged actions
-
-| Action | Trigger |
-| --- | --- |
-| `auth_success` | Token validated successfully |
-| `auth_failed` | Validation failed on a protected endpoint |
-| `created` | `create_token()` |
-| `rotated` | `rotate_token()` |
-| `revoked` | `revoke_token()` or `purge_token()` |
+Keysmith includes an immutable audit log system that tracks every authentication attempt and token lifecycle event.
 
 ---
 
-## What each row stores
+## What Gets Logged?
 
-| Field | Content |
-| --- | --- |
-| `token` | Related token (nullable for some failures) |
-| `action` | One of the actions above |
-| `path`, `method` | Request path and HTTP verb |
-| `status_code` | HTTP response status |
-| `ip_address` | Client IP (from `CLIENT_IP_HOOK`, `CLIENT_IP_HEADER`, `X-Forwarded-For`, or `REMOTE_ADDR`) |
-| `user_agent` | Client user agent |
-| `extra` | JSON metadata - actor ID, error codes, purge flag, etc. |
-| `created_at` | Timestamp |
+Every audit record in the `keysmith_token_audit_log` table captures:
 
-The `extra` field on `auth_failed` events includes an `error_code` such as `missing_token`, `invalidtoken`, `revokedtoken`, or `expiredtoken`.
+| Field | Description | Example |
+| :--- | :--- | :--- |
+| `token` | Foreign key to the token instance (set to `NULL` if token is deleted) | `tok_a1B2c3D4` |
+| `action` | The event action type | `authenticated`, `auth_failed`, `created`, `rotated`, `revoked`, `purged` |
+| `path` & `method` | The request URL path and HTTP verb | `POST /api/v1/orders/` |
+| `status_code` | The resulting HTTP response code | `200`, `401`, `403` |
+| `ip_address` | The client IP address (validated IPv4/IPv6) | `198.51.100.42` |
+| `user_agent` | The client HTTP User-Agent string | `curl/8.1.2`, `python-httpx/0.27.0` |
+| `actor` | The user who triggered the action (if created/rotated via admin/service) | `admin_user` |
+| `extra` | JSON dictionary containing error details or context metadata | `{"error": "ExpiredToken"}` |
+| `created_at` | Timestamp of the event in UTC | `2026-09-03 14:20:00` |
 
 ---
 
-## Querying
+## Client IP Resolution & Proxy Trust
 
-```python
-from keysmith.models import TokenAuditLog
+Accurate client IP tracking is vital for security auditing, anomaly detection, and rate limiting.
 
-# Recent failures
-TokenAuditLog.objects.filter(
-    action=TokenAuditLog.ACTION_AUTH_FAILED,
-).order_by("-created_at")[:50]
+Keysmith resolves the client IP using a secure 4-stage priority order:
 
-# Activity for one token
-TokenAuditLog.objects.filter(token=token).order_by("-created_at")
+```text
+1. Custom Hook (CLIENT_IP_HOOK)
+   └── Executes custom callable or dotted function.
+       │
+       ▼
+2. Custom Header (CLIENT_IP_HEADER)
+   └── e.g. "HTTP_X_REAL_IP" or "HTTP_CF_CONNECTING_IP"
+       │
+       ▼
+3. Reverse Proxy Forward (HTTP_X_FORWARDED_FOR)
+   └── Used ONLY if TRUST_PROXIES = True
+       │
+       ▼
+4. Socket Remote Address (REMOTE_ADDR)
+   └── Direct TCP connection IP
 ```
 
-Action constants are defined on the model:
+### Cloudflare or Custom Reverse Proxies
+
+If you are behind Cloudflare, AWS ALB, Nginx, or Fly.io, configure the header your proxy sends:
 
 ```python
-TokenAuditLog.ACTION_AUTH_SUCCESS   # "auth_success"
-TokenAuditLog.ACTION_AUTH_FAILED    # "auth_failed"
-TokenAuditLog.ACTION_CREATED        # "created"
-TokenAuditLog.ACTION_REVOKED        # "revoked"
-TokenAuditLog.ACTION_ROTATED        # "rotated"
-```
+# settings.py
 
----
-
-## Custom events
-
-Write to the same stream from application code:
-
-```python
-from keysmith.audit.logger import log_audit_event
-
-log_audit_event(
-    action="auth_failed",
-    request=request,
-    token=token,
-    status_code=401,
-    extra={"error_code": "custom_reason"},
-)
-```
-
-No-op when `ENABLE_AUDIT_LOGGING=False`.
-
----
-
-## Custom sink
-
-Send events to an external system instead of the database:
-
-```python
 KEYSMITH = {
-    "AUDIT_LOG_HOOK": "myapp.logging.audit_sink",
+    # If behind Cloudflare:
+    "CLIENT_IP_HEADER": "HTTP_CF_CONNECTING_IP",
+
+    # Or if behind an internal trusted proxy using X-Forwarded-For:
+    "TRUST_PROXIES": True,
 }
 ```
 
+### Using a Custom Client IP Hook
+
+For complex multi-tier infrastructures, define a custom IP resolution function:
+
 ```python
-def audit_sink(*, action, token, request, status_code, extra, payload):
-    send_to_datadog(action, payload)
+# myproject/utils.py
+
+def resolve_secure_ip(request):
+    # Custom logic to inspect headers or validate VPC CIDRs
+    return request.META.get("HTTP_TRUE_CLIENT_IP") or request.META.get("REMOTE_ADDR")
 ```
 
-When a hook is configured, it **replaces** the default database write entirely.
+Register it in your settings:
+
+```python
+# settings.py
+
+KEYSMITH = {
+    "CLIENT_IP_HOOK": "myproject.utils.resolve_secure_ip",
+    # Or pass the callable directly:
+    # "CLIENT_IP_HOOK": resolve_secure_ip,
+}
+```
+
+!!! tip "IP Validation"
+    Keysmith automatically validates that the extracted value is a valid IPv4 or IPv6 string using Python's `ipaddress` module, preventing header injection attacks into your database.
 
 ---
 
-## Retention
+## Custom Audit Hook (`AUDIT_LOG_HOOK`)
 
-Prune old rows with the management command:
+Want to stream audit events to Datadog, AWS CloudWatch, Sentry, or an external SIEM? Register an `AUDIT_LOG_HOOK`:
+
+```python
+# myproject/audit.py
+
+def stream_to_datadog(event_data):
+    """
+    event_data is a dictionary containing:
+    action, token, path, method, status_code, ip_address, extra, etc.
+    """
+    statsd.increment(
+        "api.token.access",
+        tags=[f"action:{event_data['action']}", f"status:{event_data['status_code']}"]
+    )
+```
+
+```python
+# settings.py
+
+KEYSMITH = {
+    "AUDIT_LOG_HOOK": "myproject.audit.stream_to_datadog",
+}
+```
+
+---
+
+## Log Retention & Pruning
+
+Audit tables grow rapidly in high-traffic APIs. Keysmith includes a retention pruning management command:
 
 ```bash
+# Delete all audit log entries older than 90 days:
 python manage.py prune_audit_logs --days 90
 ```
 
-If `--days` is omitted, `AUDIT_LOG_RETENTION_DAYS` from settings is used. Without either, the command prints a warning and exits without deleting anything.
+### Automated Retention via Cron or Celery
 
----
+Schedule `prune_audit_logs` to run daily in your crontab or task scheduler:
 
-## Failure behavior
-
-Audit write failures are always swallowed - authentication is never blocked by a logging outage. If audit integrity is critical, use `AUDIT_LOG_HOOK` to send events to a durable external system.
-
----
-
-**See also:** [Settings - audit](settings.md#audit-logging) · [Commands reference](../reference/commands.md)
+```cron
+# Run daily at 3:00 AM UTC
+0 3 * * * /path/to/venv/bin/python /path/to/project/manage.py prune_audit_logs --days 90
+```
