@@ -4,12 +4,27 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - ".gitignore"
+      - "LICENSE"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - ".gitignore"
+      - "LICENSE"
+
+# Cancel in-progress runs when a new commit is pushed to the same branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
+  quality:
+    name: Code Quality & Security Audit
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -17,21 +32,71 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install uv
-        run: pip install uv
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv pip install --system -e .[dev]
+
+      - name: Lint & Format Check
+        run: |
+          ruff check .
+          ruff format --check keysmith tests
+
+      - name: Security Audit (pip-audit & Bandit)
+        run: |
+          uv export --no-emit-project --no-hashes --all-extras > /tmp/requirements_audit.txt
+          uvx pip-audit -r /tmp/requirements_audit.txt
+          uvx bandit --ini .bandit -r keysmith/
+
+  test:
+    name: Test (Py ${{ matrix.python-version }} / ${{ matrix.django-name }})
+    needs: quality
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Minimum boundary
+          - python-version: "3.10"
+            django-version: "django~=4.2.0"
+            django-name: "Django 4.2 LTS"
+          # Mid releases
+          - python-version: "3.11"
+            django-version: "django~=5.1.0"
+            django-name: "Django 5.1"
+          # Current LTS
+          - python-version: "3.12"
+            django-version: "django~=5.2.0"
+            django-name: "Django 5.2 LTS"
+          # Bleeding edge
+          - python-version: "3.13"
+            django-version: "django~=5.2.0"
+            django-name: "Django 5.2 LTS"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Install dependencies
         run: |
-          uv pip install --system -e .[dev]
-          uv pip install --system "django==5.0"
-
-      - name: Run lint
-        run: ruff check .
+          uv pip install --system -e .[dev,drf]
+          uv pip install --system "${{ matrix.django-version }}"
 
       - name: Run tests
         run: pytest
 
   test-postgres:
+    name: PostgreSQL Integration (Py 3.12 / Django 5.2)
+    needs: quality
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -53,15 +118,16 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
-      - name: Install uv
-        run: pip install uv
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Install dependencies
         run: |
           uv pip install --system -e .[dev,drf] psycopg2-binary
-          uv pip install --system "django==5.0"
+          uv pip install --system "django~=5.2.0"
 
       - name: Run tests with postgres
         env:
