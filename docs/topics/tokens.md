@@ -8,30 +8,30 @@ In Keysmith, an API token is a first-class database entity representing a machin
 
 Every Keysmith token contains three distinct components engineered for speed, security, and human readability:
 
-<div class="ks-token-anatomy" markdown>
+<div class="ks-token-anatomy">
 
 <div class="ks-token-pill">
-  <span class="ks-token-part ks-token-part--prefix" title="Prefix (12 chars)">tok_a1B2c3D4</span><span class="ks-token-part ks-token-part--sep">:</span><span class="ks-token-part ks-token-part--secret" title="Secret (32 chars)">9aK2mX7pQ1rT4vW8yZ0bC3dF6hJ5nL8s</span><span class="ks-token-part ks-token-part--crc" title="CRC32 Checksum (6 digits)">481029</span>
+  <span class="ks-token-part ks-token-part--prefix" title="Prefix (12 chars)">tok_a1B2c3D4</span>
+  <span class="ks-token-part ks-token-part--sep">:</span>
+  <span class="ks-token-part ks-token-part--secret" title="Secret (32 chars)">9aK2mX7pQ1rT4vW8yZ0bC3dF6hJ5nL8s</span>
+  <span class="ks-token-part ks-token-part--crc" title="CRC32 Checksum (6 digits)">481029</span>
 </div>
 
 <div class="ks-token-legend">
 
-<div class="ks-token-legend-card" markdown>
+<div class="ks-token-legend-card">
 <strong><span class="ks-token-dot ks-token-dot--prefix"></span> Prefix (12 chars)</strong>
-`tok_a1B2c3D4`
-Indexed database column. Allows instant $O(1)$ token lookup without scanning or decrypting keys.
+<p><code>tok_a1B2c3D4</code> &mdash; Indexed database column. Enables instant <code>O(1)</code> lookup without full-table scanning or decrypting.</p>
 </div>
 
-<div class="ks-token-legend-card" markdown>
+<div class="ks-token-legend-card">
 <strong><span class="ks-token-dot ks-token-dot--secret"></span> Secret (32 chars)</strong>
-`9aK2mX...nL8s`
-High-entropy credential. Hashed at rest using PBKDF2 or SHA-256; never stored in plaintext.
+<p><code>9aK2mX...nL8s</code> &mdash; High-entropy credential. Hashed at rest using PBKDF2 or SHA-256; never stored in plaintext.</p>
 </div>
 
-<div class="ks-token-legend-card" markdown>
+<div class="ks-token-legend-card">
 <strong><span class="ks-token-dot ks-token-dot--crc"></span> Checksum (6 digits)</strong>
-`481029`
-CRC32 checksum. Validated in memory in microseconds to reject forged tokens before touching the database.
+<p><code>481029</code> &mdash; CRC32 checksum. Validated in memory in microseconds to reject forged tokens before touching the database.</p>
 </div>
 
 </div>
