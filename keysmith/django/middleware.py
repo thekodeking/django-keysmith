@@ -74,12 +74,30 @@ class KeysmithAuthenticationMiddleware:
 
         return response
 
+    def _extract_from_header(self, raw_header: str | None) -> str | None:
+        if not raw_header:
+            return None
+        cleaned = raw_header.strip()
+        auth_types = tuple(getattr(keysmith_settings, "AUTH_HEADER_TYPES", ("Bearer", "Token")) or ())
+        for auth_type in auth_types:
+            prefix = f"{auth_type} "
+            if cleaned.lower().startswith(prefix.lower()):
+                return cleaned[len(prefix) :].strip()
+        return cleaned
+
     def _get_raw_token(self, request) -> str | None:
         header_name: str = keysmith_settings.HEADER_NAME
         raw = request.META.get(header_name)
 
         if raw:
-            return raw.strip()
+            return self._extract_from_header(raw)
+
+        if header_name != "HTTP_AUTHORIZATION":
+            auth_header = request.META.get("HTTP_AUTHORIZATION")
+            if auth_header:
+                token = self._extract_from_header(auth_header)
+                if token and token != auth_header.strip():
+                    return token
 
         if keysmith_settings.ALLOW_QUERY_PARAM:
             return request.GET.get(keysmith_settings.QUERY_PARAM_NAME)

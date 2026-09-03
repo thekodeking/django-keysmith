@@ -1,4 +1,3 @@
-from django.db import transaction
 
 from keysmith.auth.exceptions import (
     ExpiredToken,
@@ -12,9 +11,8 @@ from keysmith.services.tokens import mark_token_used
 from keysmith.utils.tokens import extract_prefix_and_secret
 
 
-@transaction.atomic
 def authenticate_token(raw_token: str):
-    """Validate a raw token and return the corresponding locked token row.
+    """Validate a raw token and return the corresponding token row.
 
     The flow checks token format/checksum, existence, revoke/purge state, expiry,
     and secret hash. On success it updates `last_used_at`.
@@ -31,7 +29,11 @@ def authenticate_token(raw_token: str):
 
     try:
         Token = get_token_model()
-        token = Token.objects.select_for_update().get(prefix=prefix)
+        token = (
+            Token.objects.select_related("user")
+            .prefetch_related("scopes")
+            .get(prefix=prefix)
+        )
     except Token.DoesNotExist as exc:
         raise InvalidToken(
             "This token doesn't exist or has been deleted. Please request a new token."
