@@ -52,7 +52,7 @@ class TokenAdmin(admin.ModelAdmin):
         "rotate_selected_tokens",
     )
 
-    _RAW_TOKEN_SESSION_PREFIX = "keysmith.raw_token."
+    _RAW_TOKEN_SESSION_PREFIX = "keysmith.raw_token."  # nosec B105
 
     @admin.display(description="Token ID", ordering="prefix")
     def token_id_display(self, obj):
@@ -203,7 +203,7 @@ class TokenAdmin(admin.ModelAdmin):
         return TemplateResponse(request, "admin/keysmith/token/token_created.html", context)
 
     def token_rotated_view(self, request, object_id):
-        """Handle single-token rotation from the change form."""
+        """Handle single-token rotation from the change form with POST confirmation."""
         token = self.get_object(request, object_id)
         if token is None:
             raise Http404("Token does not exist")
@@ -211,31 +211,45 @@ class TokenAdmin(admin.ModelAdmin):
         if not self.has_change_permission(request, obj=token):
             raise Http404("Not allowed")
 
+        info = (self.model._meta.app_label, self.model._meta.model_name)
+        change_url = reverse(
+            f"admin:{info[0]}_{info[1]}_change",
+            args=[token.pk],
+            current_app=self.admin_site.name,
+        )
+
         if token.revoked or token.purged:
             messages.error(request, "Cannot rotate a revoked or purged token.")
-            info = (self.model._meta.app_label, self.model._meta.model_name)
-            change_url = reverse(
-                f"admin:{info[0]}_{info[1]}_change",
-                args=[token.pk],
-                current_app=self.admin_site.name,
-            )
             return HttpResponseRedirect(change_url)
 
-        new_raw = rotate_token(token, request=request, actor=request.user)
+        if request.method == "POST":
+            new_raw = rotate_token(token, request=request, actor=request.user)
 
-        session_key = f"{self._RAW_TOKEN_SESSION_PREFIX}{token.pk}"
-        request.session[session_key] = new_raw
+            session_key = f"{self._RAW_TOKEN_SESSION_PREFIX}{token.pk}"
+            request.session[session_key] = new_raw
 
+            context = {
+                **self.admin_site.each_context(request),
+                "opts": self.model._meta,
+                "original": token,
+                "token": token,
+                "raw_token": new_raw,
+                "title": "Token rotated",
+                "subtitle": "The old token value is now invalid.",
+            }
+            return TemplateResponse(request, "admin/keysmith/token/token_created.html", context)
+
+        # Render confirmation page on GET to prevent prefetch or CSRF state modification
         context = {
             **self.admin_site.each_context(request),
             "opts": self.model._meta,
             "original": token,
             "token": token,
-            "raw_token": new_raw,
-            "title": "Token rotated",
-            "subtitle": "The old token value is now invalid.",
+            "title": f"Rotate token: {token.name}",
         }
-        return TemplateResponse(request, "admin/keysmith/token/token_created.html", context)
+        return TemplateResponse(
+            request, "admin/keysmith/token/token_rotate_confirmation.html", context
+        )
 
     @admin.action(description="Revoke selected tokens")
     def revoke_selected_tokens(self, request, queryset):
@@ -261,19 +275,12 @@ class TokenAdmin(admin.ModelAdmin):
 
     @admin.action(description="Rotate selected tokens")
     def rotate_selected_tokens(self, request, queryset):
-        rotated = 0
-        skipped = 0
-        for token in queryset.iterator():
-            if token.revoked or token.purged:
-                skipped += 1
-                continue
-            rotate_token(token, request=request, actor=request.user)
-            rotated += 1
-
-        msg = f"Rotated {rotated} token(s)."
-        if skipped:
-            msg += f" Skipped {skipped} revoked/purged token(s)."
-        self.message_user(request, msg)
+        self.message_user(
+            request,
+            "Bulk token rotation is not permitted because new secret values can only be viewed once. "
+            "Please rotate tokens individually from their respective change forms.",
+            level=messages.ERROR,
+        )
 
 
 @admin.register(TokenAuditLog)
