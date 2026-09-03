@@ -9,33 +9,17 @@ In Keysmith, an API token is a first-class database entity representing a machin
 Every Keysmith token contains three distinct components engineered for speed, security, and human readability:
 
 <div class="ks-token-anatomy">
-
-<div class="ks-token-pill">
-  <span class="ks-token-part ks-token-part--prefix" title="Prefix (12 chars)">tok_a1B2c3D4</span>
-  <span class="ks-token-part ks-token-part--sep">:</span>
-  <span class="ks-token-part ks-token-part--secret" title="Secret (32 chars)">9aK2mX7pQ1rT4vW8yZ0bC3dF6hJ5nL8s</span>
-  <span class="ks-token-part ks-token-part--crc" title="CRC32 Checksum (6 digits)">481029</span>
-</div>
-
-<div class="ks-token-legend">
-
-<div class="ks-token-legend-card">
-<strong><span class="ks-token-dot ks-token-dot--prefix"></span> Prefix (12 chars)</strong>
-<p><code>tok_a1B2c3D4</code> &mdash; Indexed database column. Enables instant <code>O(1)</code> lookup without full-table scanning or decrypting.</p>
-</div>
-
-<div class="ks-token-legend-card">
-<strong><span class="ks-token-dot ks-token-dot--secret"></span> Secret (32 chars)</strong>
-<p><code>9aK2mX...nL8s</code> &mdash; High-entropy credential. Hashed at rest using PBKDF2 or SHA-256; never stored in plaintext.</p>
-</div>
-
-<div class="ks-token-legend-card">
-<strong><span class="ks-token-dot ks-token-dot--crc"></span> Checksum (6 digits)</strong>
-<p><code>481029</code> &mdash; CRC32 checksum. Validated in memory in microseconds to reject forged tokens before touching the database.</p>
-</div>
-
-</div>
-
+  <div class="ks-token-pill">
+    <span class="ks-token-part ks-token-part--prefix" title="Prefix (12 chars)">tok_a1B2c3D4</span>
+    <span class="ks-token-part ks-token-part--sep">:</span>
+    <span class="ks-token-part ks-token-part--secret" title="Secret (32 chars)">9aK2mX7pQ1rT4vW8yZ0bC3dF6hJ5nL8s</span>
+    <span class="ks-token-part ks-token-part--crc" title="CRC32 Checksum (6 digits)">481029</span>
+  </div>
+  <div class="ks-token-chips">
+    <span class="ks-token-chip"><span class="ks-token-dot ks-token-dot--prefix"></span> <strong>Prefix</strong> (12 chars) &bull; Indexed DB column</span>
+    <span class="ks-token-chip"><span class="ks-token-dot ks-token-dot--secret"></span> <strong>Secret</strong> (32 chars) &bull; Hashed at rest</span>
+    <span class="ks-token-chip"><span class="ks-token-dot ks-token-dot--crc"></span> <strong>Checksum</strong> (6 digits) &bull; In-memory CRC32</span>
+  </div>
 </div>
 
 1. **Prefix (`tok_a1B2c3D4`)**: A unique identifier prefixed with `tok_` (configurable via `TOKEN_PREFIX`). Stored in an indexed column for constant-time lookup.
