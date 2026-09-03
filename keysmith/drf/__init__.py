@@ -1,1 +1,1 @@
-__all__ = ["auth", "permissions"]
+__all__ = ["auth", "permissions", "throttling"]

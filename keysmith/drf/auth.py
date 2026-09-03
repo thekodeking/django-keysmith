@@ -21,8 +21,20 @@ class KeysmithAuthentication(BaseAuthentication):
     """Authenticate DRF requests using Keysmith tokens from configured header."""
 
     def authenticate_header(self, request) -> str:
-        """Return auth header name so DRF can emit 401 responses when required."""
-        return keysmith_settings.HEADER_NAME.replace("HTTP_", "").replace("_", "-")
+        """Return WWW-Authenticate challenge scheme per RFC 9110."""
+        scheme = getattr(keysmith_settings, "WWW_AUTHENTICATE_SCHEME", "Bearer")
+        return f'{scheme} realm="api"' if "realm" not in scheme else scheme
+
+    def _extract_from_header(self, raw_header: str | None) -> str | None:
+        if not raw_header:
+            return None
+        cleaned = raw_header.strip()
+        auth_types = tuple(getattr(keysmith_settings, "AUTH_HEADER_TYPES", ("Bearer", "Token")) or ())
+        for auth_type in auth_types:
+            prefix = f"{auth_type} "
+            if cleaned.lower().startswith(prefix.lower()):
+                return cleaned[len(prefix) :].strip()
+        return cleaned
 
     def authenticate(self, request):
         # prevent duplicate audit records when middleware is also enabled.
@@ -31,6 +43,16 @@ class KeysmithAuthentication(BaseAuthentication):
 
         header_name = keysmith_settings.HEADER_NAME.replace("HTTP_", "").replace("_", "-")
         raw = request.headers.get(header_name)
+        if raw:
+            raw = self._extract_from_header(raw)
+
+        if not raw and header_name.lower() != "authorization":
+            auth_header = request.headers.get("Authorization")
+            if auth_header:
+                extracted = self._extract_from_header(auth_header)
+                if extracted and extracted != auth_header.strip():
+                    raw = extracted
+
         if not raw and keysmith_settings.ALLOW_QUERY_PARAM:
             raw = request.query_params.get(keysmith_settings.QUERY_PARAM_NAME)
         if not raw:
