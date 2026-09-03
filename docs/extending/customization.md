@@ -59,13 +59,21 @@ class FastTokenHasher(BaseTokenHasher):
         ...
 ```
 
-The default `PBKDF2SHA512TokenHasher` uses Django's `PBKDF2PasswordHasher` with `algorithm="pbkdf2_sha512"` and `iterations=HASH_ITERATIONS`.
+### Built-in Hashers
+
+| Hasher | Path | Description |
+| --- | --- | --- |
+| `PBKDF2SHA512TokenHasher` | `keysmith.hashers.PBKDF2SHA512TokenHasher` | Default. Uses PBKDF2 with SHA-512 and configurable iterations. |
+| `SHA256TokenHasher` | `keysmith.hashers.SHA256TokenHasher` | High-throughput salted SHA-256 for sub-millisecond authentication. |
+| `HMACSHA256TokenHasher` | `keysmith.hashers.HMACSHA256TokenHasher` | Salted HMAC-SHA256 keyed with Django's `SECRET_KEY`. |
+
+For high-throughput production APIs with high-entropy keys (32+ chars), `SHA256TokenHasher` or `HMACSHA256TokenHasher` drastically reduce CPU overhead and latency.
 
 ---
 
 ## Hooks
 
-Hooks are loaded via `import_string` from dotted paths in settings.
+Hooks can be configured as dotted Python strings (e.g. `"myapp.hooks.rate_limit"`) or as direct Python callable functions.
 
 ### Rate limit (middleware)
 
@@ -105,6 +113,18 @@ def audit(*, action, token, request, status_code, extra, payload):
 ```
 
 `payload` contains: `path`, `method`, `status_code`, `ip_address`, `user_agent`.
+
+### Client IP hook
+
+```python
+KEYSMITH = {"CLIENT_IP_HOOK": "myapp.utils.get_client_ip"}
+```
+
+```python
+def get_client_ip(request) -> str:
+    """Return the verified client IP address from proxy headers."""
+    return request.META.get("HTTP_CF_CONNECTING_IP")
+```
 
 ---
 

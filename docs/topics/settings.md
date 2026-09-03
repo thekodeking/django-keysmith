@@ -23,8 +23,8 @@ from keysmith.settings import KEYSMITH_DEFAULTS, keysmith_settings
 
 | Key | Default | Description |
 | --- | --- | --- |
-| `HASH_BACKEND` | `keysmith.hashers.PBKDF2SHA512TokenHasher` | Dotted path to hasher class |
-| `HASH_ITERATIONS` | `100_000` | PBKDF2 iterations (minimum 10,000) |
+| `HASH_BACKEND` | `keysmith.hashers.PBKDF2SHA512TokenHasher` | Dotted path to hasher class (also supports `keysmith.hashers.SHA256TokenHasher` and `keysmith.hashers.HMACSHA256TokenHasher`) |
+| `HASH_ITERATIONS` | `100_000` | PBKDF2 iterations (minimum 10,000; only used with PBKDF2) |
 
 ---
 
@@ -43,9 +43,14 @@ from keysmith.settings import KEYSMITH_DEFAULTS, keysmith_settings
 | Key | Default | Description |
 | --- | --- | --- |
 | `HEADER_NAME` | `HTTP_X_KEYSMITH_TOKEN` | `request.META` key (= `X-KEYSMITH-TOKEN` header) |
+| `AUTH_HEADER_TYPES` | `("Bearer", "Token")` | Accepted schemes in `Authorization` header |
+| `WWW_AUTHENTICATE_SCHEME` | `"Bearer"` | Challenge scheme in `WWW-Authenticate` header (RFC 9110) |
 | `ALLOW_QUERY_PARAM` | `False` | Accept token via query string |
 | `QUERY_PARAM_NAME` | `keysmith_token` | Query parameter name |
+| `LAST_USED_UPDATE_INTERVAL` | `60` | Minimum seconds between database writes to `last_used_at` (0 = update every request) |
 | `TRUST_PROXIES` | `False` | Read client IP from `X-Forwarded-For` |
+| `CLIENT_IP_HEADER` | `None` | Custom header for client IP (e.g. `HTTP_X_REAL_IP`, `HTTP_CF_CONNECTING_IP`) |
+| `CLIENT_IP_HOOK` | `None` | Callable or dotted string resolving client IP |
 
 ---
 
@@ -83,6 +88,7 @@ from keysmith.settings import KEYSMITH_DEFAULTS, keysmith_settings
 | --- | --- | --- |
 | `RATE_LIMIT_HOOK` | `None` | `hook(request, raw_token=None)` |
 | `DRF_THROTTLE_HOOK` | `None` | `hook(request, token=None)` |
+| `CLIENT_IP_HOOK` | `None` | `hook(request) -> str` |
 
 ---
 

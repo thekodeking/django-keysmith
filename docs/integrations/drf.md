@@ -97,6 +97,34 @@ See [Scopes](../topics/scopes.md) for `HasKeysmithScopes` and view-level `requir
 
 ## Throttling
 
+Keysmith provides built-in rate throttling per token prefix using Django's cache framework:
+
+```python
+from keysmith.drf.throttling import KeysmithTokenRateThrottle
+from rest_framework.views import APIView
+
+
+class ResourceView(APIView):
+    throttle_classes = [KeysmithTokenRateThrottle]
+```
+
+Configure rates globally in `settings.py`:
+
+```python
+REST_FRAMEWORK = {
+    "DEFAULT_THROTTLE_CLASSES": [
+        "keysmith.drf.throttling.KeysmithTokenRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "keysmith_token": "1000/hour",
+    },
+}
+```
+
+### Custom Throttle Hook
+
+For custom throttling logic, use `DRF_THROTTLE_HOOK`:
+
 ```python
 from rest_framework.exceptions import Throttled
 
@@ -117,6 +145,10 @@ Runs after successful authentication, before the view.
 ## Client usage
 
 ```bash
+# Standard Authorization Bearer header (recommended)
+curl -H "Authorization: Bearer <raw-token>" http://localhost:8000/api/status/
+
+# Or custom X-KEYSMITH-TOKEN header
 curl -H "X-KEYSMITH-TOKEN: <raw-token>" http://localhost:8000/api/status/
 ```
 
@@ -125,7 +157,7 @@ curl -H "X-KEYSMITH-TOKEN: <raw-token>" http://localhost:8000/api/status/
 ## Testing
 
 ```python
-client.credentials(HTTP_X_KEYSMITH_TOKEN=raw_token)
+client.credentials(HTTP_AUTHORIZATION=f"Bearer {raw_token}")
 response = client.get("/api/status/")
 assert response.status_code == 200
 ```

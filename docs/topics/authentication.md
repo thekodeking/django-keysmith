@@ -28,13 +28,19 @@ Header / query param
   Return Token instance
 ```
 
-Steps run inside a database transaction with `select_for_update` on the token row.
+Steps run using optimized, non-locking reads with `select_related("user")` and `prefetch_related("scopes")`. Token usage timestamps (`last_used_at`) are updated atomically and debounced via `LAST_USED_UPDATE_INTERVAL` (default: 60s) to prevent database write amplification on read-heavy workloads.
 
 ---
 
 ## Where tokens are read from
 
-By default, clients send:
+Clients can send the token using the standard `Authorization` header:
+
+```http
+Authorization: Bearer tok_a1B2c3D4:secret...crc
+```
+
+Or using the configured custom header:
 
 ```http
 X-KEYSMITH-TOKEN: tok_a1B2c3D4:secret...crc

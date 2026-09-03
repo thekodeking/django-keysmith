@@ -24,7 +24,7 @@ Keysmith writes an audit row for authentication attempts and token lifecycle cha
 | `action` | One of the actions above |
 | `path`, `method` | Request path and HTTP verb |
 | `status_code` | HTTP response status |
-| `ip_address` | Client IP (`REMOTE_ADDR` or `X-Forwarded-For` when `TRUST_PROXIES=True`) |
+| `ip_address` | Client IP (from `CLIENT_IP_HOOK`, `CLIENT_IP_HEADER`, `X-Forwarded-For`, or `REMOTE_ADDR`) |
 | `user_agent` | Client user agent |
 | `extra` | JSON metadata - actor ID, error codes, purge flag, etc. |
 | `created_at` | Timestamp |

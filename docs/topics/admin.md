@@ -19,9 +19,11 @@ The admin `save_model` calls `create_token()` under the hood. The raw secret is 
 
 | Action | How |
 | --- | --- |
-| **Rotate** | Per-token "Rotate Token" button, or bulk action |
+| **Rotate** | Per-token "Rotate Token" button with confirmation step |
 | **Revoke** | Bulk action on selected tokens |
 | **Purge** | Bulk action on selected tokens |
+
+Bulk rotation is disabled to prevent accidental permanent credential loss, as each new raw secret can only be viewed once upon generation.
 
 Rotate is unavailable for tokens that are already revoked or purged.
 
