@@ -1,77 +1,76 @@
-# Security
+# Production Security Checklist
 
-What Keysmith guarantees, what it leaves to you, and how to deploy it safely.
-
----
-
-## Guarantees
-
-| Guarantee | Mechanism |
-| --- | --- |
-| No plaintext secrets | PBKDF2-SHA512 hash stored in `token.key` |
-| Fast rejection of garbage | 6-digit CRC before database lookup |
-| Lifecycle enforcement | Revoked, purged, and expired tokens blocked |
-| Consistent validation | Single `authenticate_token()` for all integrations |
-| Atomic operations | Transactions + `select_for_update` on auth and lifecycle |
+A security hardening guide for running `django-keysmith` in production environments.
 
 ---
 
-## Your responsibilities
+## 1. Always Enforce HTTPS
 
-| Area | Recommendation |
-| --- | --- |
-| Transport | HTTPS everywhere in production |
-| Distribution | Deliver raw tokens through secure channels |
-| Storage (client side) | Treat raw tokens like passwords |
-| Rate limiting | Wire `RATE_LIMIT_HOOK` / `DRF_THROTTLE_HOOK` |
-| Database | Prefer PostgreSQL over SQLite for concurrent auth |
+API tokens transmitted over plaintext HTTP can be intercepted by intermediate proxies or network eavesdroppers.
 
-Keysmith warns (`keysmith.W001`) when SQLite is the default database because `SELECT FOR UPDATE` behavior differs under concurrency.
+Ensure HTTPS is strictly enforced in your production `settings.py`:
 
----
+```python
+# settings.py (Production)
 
-## Error disclosure {#error-disclosure}
-
-Keysmith distinguishes failure reasons internally:
-
-```text
-TokenAuthError
-├── InvalidToken
-├── ExpiredToken
-└── RevokedToken
+SECURE_SSL_REDIRECT = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 ```
 
-**Do not expose these distinctions to API clients.** Telling an attacker whether a token exists, is expired, or is revoked leaks information about your credential store.
+---
 
-Keysmith maps all validation failures to one external message:
+## 2. Choosing the Right Hasher for Your Threat Model
 
-| Integration | Behavior |
-| --- | --- |
-| DRF | `AuthenticationFailed(get_message("invalid_token"))` |
-| Django decorator | `HttpResponseUnauthorized` with `invalid_token` message |
-| Custom code | Catch specific exceptions for internal logs; return generic 401 |
+Keysmith hashes token secrets using one-way cryptographic functions.
+
+| Hasher Backend | Brute-Force Cost | CPU Latency | Best Used In |
+| :--- | :--- | :--- | :--- |
+| **`PBKDF2SHA512TokenHasher`** | **Very High** (100k rounds) | ~10–25ms per check | Public APIs, partner integrations where database breaches are the primary threat. |
+| **`HMACSHA256TokenHasher`** | **Impossible without `SECRET_KEY`** | < 0.1ms | Private microservices, high-traffic internal APIs. |
+| **`SHA256TokenHasher`** | Low if database leaked | < 0.05ms | High-throughput APIs where tokens have high entropy (32+ chars) and low lifetime. |
+
+!!! tip "Performance Balance"
+    If your API handles thousands of requests per second, `PBKDF2` may consume significant CPU resources. Consider `HMACSHA256TokenHasher`, which runs in sub-millisecond time while remaining mathematically unforgeable without your application's `SECRET_KEY`.
 
 ---
 
-## Scope security
+## 3. Defense Against Timing Attacks
 
-- Use `AVAILABLE_SCOPES` to prevent over-permissioning at creation
-- Issue one token per integration boundary
-- Set finite `DEFAULT_EXPIRY_DAYS`
-- Rotate immediately after suspected exposure
+Keysmith exclusively uses Django's `constant_time_compare()` when comparing token hashes.
 
----
-
-## Audit integrity
-
-Audit write failures are swallowed so auth never fails because logging is down. For compliance-critical environments, use `AUDIT_LOG_HOOK` to send events to a durable external system (SIEM, log aggregator) in addition to or instead of the database.
+A standard string equality comparison (`==`) terminates at the first differing byte, allowing an attacker to determine the hash character-by-character by measuring response timing variations down to nanoseconds. Constant-time comparisons guarantee that verification always takes the exact same duration regardless of matching prefix length.
 
 ---
 
-## Reporting vulnerabilities
+## 4. Reverse Proxy & Header Spoofing
 
-Report security issues privately as described in [SECURITY.md](https://github.com/thekodeking/django-keysmith/blob/main/SECURITY.md).
+Never enable `TRUST_PROXIES = True` unless your Django application sits directly behind a trusted reverse proxy (Nginx, Caddy, AWS ALB, Cloudflare) that actively strips or overwrites untrusted incoming `X-Forwarded-For` headers.
+
+If an attacker sends a spoofed `X-Forwarded-For: 127.0.0.1` header directly to your application without proxy sanitation, an untrusted proxy configuration could falsify your audit trail.
 
 ---
 
-**See also:** [Settings](../topics/settings.md) · [Audit logs](../topics/audit.md)
+## 5. Secret Entropy & Length
+
+Keysmith enforces a minimum token secret length of 16 characters (default: 32 characters) via Django system checks (`keysmith.E007`):
+
+```python
+# settings.py
+
+KEYSMITH = {
+    # 32 characters of cryptographically secure random alphanumeric characters
+    # provides ~190 bits of entropy, well beyond brute-force feasibility.
+    "TOKEN_SECRET_LENGTH": 32,
+}
+```
+
+---
+
+## 6. Audit Trail Compliance & Privacy (GDPR / CCPA)
+
+Audit logs store IP addresses and request paths. Depending on your jurisdiction:
+
+1. **Retention Windows**: Do not retain audit logs indefinitely. Configure `python manage.py prune_audit_logs --days 90` to automatically delete records after your compliance window closes.
+2. **IP Masking**: If required by privacy regulations, use `CLIENT_IP_HOOK` to truncate or anonymize the last octet of IPv4 addresses before saving.

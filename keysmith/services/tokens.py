@@ -181,7 +181,7 @@ def create_token(
 
 
 @transaction.atomic
-def rotate_token(token, *, request=None, actor=None) -> str:
+def rotate_token(token, *, expires_at=None, request=None, actor=None) -> str:
     """Rotate a token secret/hash and emit an audit entry."""
     if token.revoked or token.purged:
         raise ValueError("Cannot rotate a revoked or purged token")
@@ -196,9 +196,18 @@ def rotate_token(token, *, request=None, actor=None) -> str:
         namespace=namespace,
     )
 
+    update_fields = ["key", "last_used_at"]
     token.key = hasher.hash(secret)
     token.last_used_at = None
-    token.save(update_fields=["key", "last_used_at"])
+
+    if expires_at is not None:
+        token.expires_at = expires_at
+        update_fields.append("expires_at")
+    elif token.is_expired:
+        token.expires_at = _default_expiry()
+        update_fields.append("expires_at")
+
+    token.save(update_fields=update_fields)
     log_audit_event(
         action="rotated",
         request=request,
@@ -266,4 +275,18 @@ def purge_token(token, *, request=None, actor=None) -> None:
 
 
 def mark_token_used(token) -> None:
-    token.__class__.objects.filter(pk=token.pk).update(last_used_at=timezone.now())
+    now = timezone.now()
+    interval = getattr(keysmith_settings, "LAST_USED_UPDATE_INTERVAL", 60)
+    if (
+        interval > 0
+        and token.last_used_at is not None
+        and (now - token.last_used_at).total_seconds() < interval
+    ):
+        return
+
+    updated = (
+        token.__class__.objects.filter(pk=token.pk, revoked=False, purged=False)
+        .update(last_used_at=now)
+    )
+    if updated or token.last_used_at is None:
+        token.last_used_at = now

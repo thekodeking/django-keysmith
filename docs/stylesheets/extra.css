@@ -155,3 +155,185 @@
   color: var(--md-default-fg-color);
 }
 
+/* ── Badges & HTTP Status Indicators (FastAPI Style) ────────── */
+
+.ks-badge {
+  display: inline-block;
+  font-family: var(--md-code-font);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+
+.ks-badge--get {
+  background: rgba(13, 148, 136, 0.15);
+  color: #0d9488;
+  border: 1px solid rgba(13, 148, 136, 0.3);
+}
+
+.ks-badge--post {
+  background: rgba(59, 130, 246, 0.15);
+  color: #2563eb;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.ks-badge--auth {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* ── Diagrams & Mermaid Container ───────────────────────────── */
+
+.mermaid {
+  text-align: center;
+  margin: 1.5rem 0;
+  background: var(--md-code-bg-color);
+  border: 1px solid var(--md-default-fg-color--lightest, #e2e8f0);
+  border-radius: var(--ks-radius);
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── Architecture Flow Box (Text/ASCII) ──────────────────────── */
+
+.ks-flow {
+  background: var(--md-code-bg-color);
+  border: 1px solid var(--md-default-fg-color--lightest, #e2e8f0);
+  border-radius: var(--ks-radius);
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-family: var(--md-code-font);
+  font-size: 0.85em;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+/* ── Compact Token Anatomy Component ────────────────────────── */
+
+.ks-token-anatomy {
+  margin: 1.25rem 0;
+  padding: 0.85rem 1rem;
+  background: var(--md-code-bg-color);
+  border: 1px solid var(--md-default-fg-color--lightest, #e2e8f0);
+  border-radius: var(--ks-radius);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ks-token-pill {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--md-code-font);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.45rem 0.65rem;
+  background: var(--md-default-bg-color);
+  border: 1px solid var(--md-default-fg-color--lightest, #cbd5e1);
+  border-radius: 0.375rem;
+  overflow-x: auto;
+  white-space: nowrap;
+  gap: 0.25rem;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.ks-token-part {
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+}
+
+.ks-token-part--prefix {
+  background: rgba(13, 148, 136, 0.12);
+  color: #0f766e;
+  border: 1px solid rgba(13, 148, 136, 0.35);
+}
+
+.ks-token-part--sep {
+  color: var(--md-default-fg-color--light, #64748b);
+  padding: 0 0.1rem;
+  font-weight: 800;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.ks-token-part--secret {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4338ca;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+}
+
+.ks-token-part--crc {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+[data-md-color-scheme="slate"] .ks-token-part--prefix {
+  background: rgba(45, 212, 191, 0.15);
+  color: #2dd4bf;
+  border-color: rgba(45, 212, 191, 0.35);
+}
+
+[data-md-color-scheme="slate"] .ks-token-part--secret {
+  background: rgba(165, 180, 252, 0.15);
+  color: #c7d2fe;
+  border-color: rgba(165, 180, 252, 0.35);
+}
+
+[data-md-color-scheme="slate"] .ks-token-part--crc {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fde047;
+  border-color: rgba(251, 191, 36, 0.35);
+}
+
+.ks-token-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+  font-size: 0.78rem;
+  color: var(--md-default-fg-color--light);
+}
+
+.ks-token-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 500;
+}
+
+.ks-token-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.ks-token-dot--prefix { background: #0d9488; }
+.ks-token-dot--secret { background: #6366f1; }
+.ks-token-dot--crc    { background: #d97706; }
+
+[data-md-color-scheme="slate"] .ks-token-dot--prefix { background: #2dd4bf; }
+[data-md-color-scheme="slate"] .ks-token-dot--secret { background: #818cf8; }
+[data-md-color-scheme="slate"] .ks-token-dot--crc    { background: #fbbf24; }
+
+
+

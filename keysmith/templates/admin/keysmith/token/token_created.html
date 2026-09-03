@@ -1,11 +1,11 @@
 {% extends "admin/base_site.html" %}
-{% load i18n %}
+{% load i18n admin_urls %}
 
 {% block breadcrumbs %}
 <div class="breadcrumbs">
   <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
   &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
-  &rsaquo; <a href="{% url 'admin:keysmith_token_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
   &rsaquo; {% translate 'Token created' %}
 </div>
 {% endblock %}
@@ -26,8 +26,8 @@
   </fieldset>
 
   <div class="submit-row">
-    <a class="button" href="{% url 'admin:keysmith_token_change' token.pk %}">Go to token details</a>
-    <a class="button" href="{% url 'admin:keysmith_token_changelist' %}">Back to tokens</a>
+    <a class="button" href="{% url opts|admin_urlname:'change' token.pk %}">Go to token details</a>
+    <a class="button" href="{% url opts|admin_urlname:'changelist' %}">Back to tokens</a>
   </div>
 </div>
 {% endblock %}

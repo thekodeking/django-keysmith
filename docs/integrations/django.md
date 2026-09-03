@@ -1,144 +1,136 @@
-# Django integration
+# Standard Django Integration
 
-Use middleware and decorators when your API is built with standard Django views - function-based or class-based - without DRF.
+Use middleware, decorators, and mixins when building APIs with standard Django views (Function-Based or Class-Based) without Django REST Framework.
 
 ---
 
-## Setup
+## 1. Setup Middleware
 
-From [Install](../getting-started/install.md):
+Add `KeysmithAuthenticationMiddleware` directly after Django's `AuthenticationMiddleware`:
 
 ```python
-INSTALLED_APPS = ["keysmith"]
+# settings.py
 
 MIDDLEWARE = [
+    # ...
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "keysmith.django.middleware.KeysmithAuthenticationMiddleware",
 ]
 ```
 
----
+### How the Middleware Operates
 
-## How it works
+The middleware runs on every incoming request:
 
-```mermaid
-flowchart TD
-    A[Incoming request] --> B[Middleware extracts token]
-    B --> C{Valid?}
-    C -->|Yes| D[Set keysmith_token + keysmith_user]
-    C -->|No| E[Set keysmith_auth_error]
-    C -->|Missing| F[All attributes None]
-    D --> G[View runs]
-    E --> G
-    F --> G
-    G --> H{keysmith_required?}
-    H -->|Yes, no token| I[401 response]
-    H -->|Yes, invalid| I
-    H -->|OK| J[200 response]
-    I --> K[Audit: auth_failed]
-    J --> L[Audit: auth_success]
+```text
+Incoming HTTP Request
+          │
+          ▼
+┌──────────────────────────────────────────────────────────┐
+│ KeysmithAuthenticationMiddleware                         │
+│ 1. Extracts token from Authorization header or custom    │
+│    X-KEYSMITH-TOKEN header.                              │
+│ 2. Validates CRC32 checksum & verifies database state.   │
+│ 3. Attaches results to request:                          │
+│    - request.keysmith_token = Token instance (or None)   │
+│    - request.keysmith_user  = Linked user (or None)      │
+│    - request.keysmith_auth_error = Exception (or None)   │
+└──────────────────────────┬───────────────────────────────┘
+                           │
+                           ▼ (Never blocks public requests!)
+                      Target View
 ```
 
-Middleware never blocks requests. Enforcement is opt-in per view.
+!!! tip "Non-Blocking Architecture"
+    The middleware **never blocks or rejects unauthenticated requests on its own**. Public endpoints, admin views, and web pages proceed normally. Views explicitly enforce authentication using the `@keysmith_required` decorator or mixin.
 
 ---
 
-## Protecting views
+## 2. Protecting Function-Based Views (FBVs)
+
+Use the `@keysmith_required` decorator to enforce token authentication:
 
 ```python
+# views.py
 from django.http import JsonResponse
-from keysmith.django.decorator import keysmith_required
-
+from keysmith.django.decorator import keysmith_required, require_scopes
 
 @keysmith_required
-def api_status(request):
+def status_api(request):
     return JsonResponse({
-        "prefix": request.keysmith_token.prefix,
-        "user": getattr(request.keysmith_user, "username", None),
+        "status": "online",
+        "token_prefix": request.keysmith_token.prefix,
+        "username": getattr(request.keysmith_user, "username", None),
     })
 ```
 
-### Decorator options
+### Enforcing Scopes
+
+Stack `@require_scopes` to ensure the token possesses specific permissions:
 
 ```python
-@keysmith_required(
-    allow_anonymous=False,    # reject requests with no token
-    missing_message=None,     # custom 401 when token absent
-    invalid_message=None,     # custom 401 when token invalid
-)
-def my_view(request):
-    ...
-```
-
-| Mode | Behavior |
-| --- | --- |
-| Default | 401 if no token or invalid token |
-| `allow_anonymous=True` | Allow missing token; still reject invalid tokens |
-
----
-
-## Scope enforcement
-
-```python
-from keysmith.django.permissions import keysmith_scopes
-
-
 @keysmith_required
-@keysmith_scopes("write")
-def create_resource(request):
-    ...
+@require_scopes("billing.view_invoice", "billing.create_charge")
+def process_charge(request):
+    # Only tokens with both billing scopes can execute this view
+    return JsonResponse({"status": "charge processed"})
 ```
 
-Decorator order matters: `@keysmith_required` must be the outer decorator (listed first / applied last).
+If the token lacks any required scope, Keysmith returns `403 Forbidden`:
+
+```json
+{"detail": "Token does not have required scope: billing.create_charge"}
+```
 
 ---
 
-## Client usage
+## 3. Protecting Class-Based Views (CBVs)
 
-```bash
-curl -H "X-KEYSMITH-TOKEN: <raw-token>" http://localhost:8000/api/status/
-```
-
-Customize the header via `KEYSMITH["HEADER_NAME"]`.
-
----
-
-## Class-based views
-
-Apply the decorator to `dispatch`:
+For Django Class-Based Views, inherit from `KeysmithRequiredMixin`:
 
 ```python
+# views.py
 from django.views import View
-from keysmith.django.decorator import keysmith_required
+from django.http import JsonResponse
+from keysmith.django.mixins import KeysmithRequiredMixin
 
+class CustomerProfileView(KeysmithRequiredMixin, View):
+    required_scopes = ["customers.view_customer"]
 
-@keysmith_required
-class SecureView(View):
-    def get(self, request):
-        return JsonResponse({"ok": True})
-```
-
-Or use `method_decorator` for individual HTTP methods.
-
----
-
-## Testing
-
-Simulate middleware in tests with `RequestFactory`:
-
-```python
-from django.test import RequestFactory
-from keysmith.django.middleware import KeysmithAuthenticationMiddleware
-
-factory = RequestFactory()
-request = factory.get("/api/status/", HTTP_X_KEYSMITH_TOKEN=raw_token)
-
-middleware = KeysmithAuthenticationMiddleware(lambda r: None)
-middleware(request)
-
-assert request.keysmith_token is not None
+    def get(self, request, *args, **kwargs):
+        token = request.keysmith_token
+        return JsonResponse({
+            "token": token.prefix,
+            "user": request.keysmith_user.username,
+        })
 ```
 
 ---
 
-**See also:** [Authentication](../topics/authentication.md) · [Scopes](../topics/scopes.md) · [Authentication reference](../reference/authentication.md)
+## 4. Accessing Request Context
+
+When a request is authenticated, Keysmith provides several context attributes on the `request` object:
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `request.keysmith_token` | `Token | None` | The active `Token` database instance. |
+| `request.keysmith_user` | `User | None` | The Django `User` linked to the token (or `None` for system tokens). |
+| `request.keysmith_auth_error` | `Exception | None` | If authentication failed, contains the exception (e.g. `InvalidToken`, `ExpiredToken`, `RevokedToken`). |
+
+---
+
+## 5. Customizing Unauthorized Responses
+
+By default, `@keysmith_required` returns a JSON response:
+
+```http
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: Bearer realm="api"
+Content-Type: application/json
+
+{
+  "detail": "Invalid token format or token does not exist."
+}
+```
+
+If you need a custom JSON schema or error payload, inspect `request.keysmith_auth_error` in a custom decorator or exception handler.

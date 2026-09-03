@@ -1,16 +1,16 @@
-# Django REST Framework integration
+# Django REST Framework (DRF) Integration
 
-Keysmith integrates with DRF's authentication and permission system. Install the optional extra and configure two classes.
+Integrate Keysmith with Django REST Framework to support API key authentication, permission scopes, and token rate limiting.
 
 ---
 
-## Setup
+## 1. Quick Setup
 
-```bash
-pip install "django-keysmith[drf]"
-```
+Configure Keysmith in your `REST_FRAMEWORK` settings:
 
 ```python
+# settings.py
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "keysmith.drf.auth.KeysmithAuthentication",
@@ -21,121 +21,140 @@ REST_FRAMEWORK = {
 }
 ```
 
-Per-view overrides work as usual - global defaults just reduce boilerplate.
-
 ---
 
-## How it works
+## 2. How DRF Authentication Works
 
-```mermaid
-flowchart TD
-    A[DRF request] --> B[KeysmithAuthentication]
-    B --> C{Token present?}
-    C -->|No| D[Return None - other auth may run]
-    C -->|Yes| E[authenticate_token]
-    E -->|Error| F[AuthenticationFailed 401]
-    E -->|OK| G[DRF_THROTTLE_HOOK]
-    G --> H["Return (user, token)"]
-    H --> I[Permission classes run]
-    I --> J[View logic]
+`KeysmithAuthentication` integrates into DRF's standard authentication cycle:
+
+```text
+Incoming API Request
+          │
+          ▼
+┌──────────────────────────────────────────────────────────┐
+│ KeysmithAuthentication.authenticate(request)             │
+│ 1. Extracts token from Authorization header              │
+│    (Bearer <token> or Token <token>)                     │
+│ 2. Validates CRC32 checksum & checks database state      │
+│ 3. Returns (user, token) tuple:                          │
+│    - request.user = token.user (or AnonymousUser)        │
+│    - request.auth = Token model instance                 │
+└──────────────────────────┬───────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────┐
+│ DRF Permission Classes Check                             │
+│ - RequireKeysmithToken: Ensures request.auth is a Token  │
+│ - HasTokenScope: Ensures token has required scopes       │
+└──────────────────────────┬───────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────┐
+│ DRF Throttling (KeysmithTokenRateThrottle)               │
+│ Enforces rate limits per token prefix or client IP       │
+└──────────────────────────┬───────────────────────────────┘
+                           │
+                           ▼
+                      API View Logic
 ```
 
-After authentication:
-
-- `request.auth` → `Token` instance
-- `request.user` → `token.user` or DRF's unauthenticated user
-
 ---
 
-## Basic endpoint
+## 3. Protecting Views & ViewSets
+
+### Using APIView
 
 ```python
-from rest_framework.response import Response
+# views.py
 from rest_framework.views import APIView
+from rest_framework.response import Response
+from keysmith.drf.permissions import RequireKeysmithToken, HasTokenScope
 
+class AnalyticsView(APIView):
+    # Require a valid Keysmith token with the analytics view permission:
+    permission_classes = [RequireKeysmithToken, HasTokenScope]
+    required_scopes = ["reports.view_analytics"]
 
-class StatusView(APIView):
     def get(self, request):
         return Response({
-            "prefix": request.auth.prefix,
-            "user_id": getattr(request.user, "pk", None),
+            "token": request.auth.prefix,
+            "user": str(request.user),
+            "data": [10, 20, 30],
         })
 ```
 
----
-
-## Requiring authentication explicitly
+### Using ModelViewSet
 
 ```python
-from keysmith.drf.permissions import RequireKeysmithToken
+# views.py
+from rest_framework import viewsets
+from keysmith.drf.permissions import RequireKeysmithToken, HasTokenScope
+from .models import Invoice
+from .serializers import InvoiceSerializer
 
+class InvoiceViewSet(viewsets.ModelViewSet):
+    queryset = Invoice.objects.all()
+    serializer_class = InvoiceSerializer
+    permission_classes = [RequireKeysmithToken, HasTokenScope]
 
-class StatusView(APIView):
-    permission_classes = [RequireKeysmithToken]
+    # Dynamically specify scopes per action:
+    def get_required_scopes(self):
+        if self.action in ["create", "update", "partial_update"]:
+            return ["invoices.change_invoice"]
+        if self.action == "destroy":
+            return ["invoices.delete_invoice"]
+        return ["invoices.view_invoice"]
 ```
 
-`RequireKeysmithToken` raises `NotAuthenticated` when `request.auth` is missing.
-
 ---
 
-## Scope-protected endpoints
+## 4. Rate Limiting with `KeysmithTokenRateThrottle`
+
+Keysmith provides a dedicated rate-limiting throttle class for DRF:
 
 ```python
-from keysmith.drf.permissions import RequireKeysmithToken, ScopedPermission
+# settings.py
 
-
-class WriteView(APIView):
-    permission_classes = [RequireKeysmithToken, ScopedPermission("write")]
-
-    def post(self, request):
-        return Response({"created": True})
-```
-
-See [Scopes](../topics/scopes.md) for `HasKeysmithScopes` and view-level `required_scopes`.
-
----
-
-## Throttling
-
-```python
-from rest_framework.exceptions import Throttled
-
-KEYSMITH = {
-    "DRF_THROTTLE_HOOK": "myapp.hooks.throttle",
+REST_FRAMEWORK = {
+    "DEFAULT_THROTTLE_CLASSES": [
+        "keysmith.drf.throttling.KeysmithTokenRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        # 1,000 requests per hour per API token prefix
+        "keysmith": "1000/hour",
+    },
 }
-
-
-def throttle(request, token=None):
-    if should_throttle(token):
-        raise Throttled(detail="Too many requests")
 ```
 
-Runs after successful authentication, before the view.
+### How Throttling Works
+- If a request is authenticated with a token, the rate limit is tracked **per token prefix** (`keysmith_tok_a1B2c3D4`).
+- If unauthenticated, it falls back to rate-limiting by the client's validated IP address.
+- Multiple application servers sharing Redis or Memcached enforce the limit globally.
 
----
-
-## Client usage
-
-```bash
-curl -H "X-KEYSMITH-TOKEN: <raw-token>" http://localhost:8000/api/status/
-```
-
----
-
-## Testing
+You can also apply throttling per view:
 
 ```python
-client.credentials(HTTP_X_KEYSMITH_TOKEN=raw_token)
-response = client.get("/api/status/")
-assert response.status_code == 200
+from keysmith.drf.throttling import KeysmithTokenRateThrottle
+
+class HighVolumeExportView(APIView):
+    throttle_classes = [KeysmithTokenRateThrottle]
+    throttle_scope = "keysmith"
 ```
 
 ---
 
-## Middleware coexistence
+## 5. RFC 9110 Challenge Headers
 
-Keysmith middleware and DRF auth can run together. DRF sets `_keysmith_skip_middleware_audit` on the underlying Django request to prevent duplicate audit events.
+When a request lacks credentials or fails authentication, `KeysmithAuthentication` automatically emits standard `WWW-Authenticate` headers:
 
----
+```http
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: Bearer realm="api"
+Content-Type: application/json
 
-**See also:** [Authentication](../topics/authentication.md) · [Permissions reference](../reference/permissions.md)
+{
+  "detail": "Authentication credentials were not provided."
+}
+```
+
+You can customize the challenge scheme (e.g. `"Token"` instead of `"Bearer"`) via `WWW_AUTHENTICATE_SCHEME` in `settings.py`.

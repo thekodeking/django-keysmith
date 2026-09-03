@@ -16,6 +16,8 @@ help:
 	@echo "make lint           Run linters"
 	@echo "make format         Auto-format code"
 	@echo "make check          Lint + tests"
+	@echo "make audit          Run pip-audit on locked dependencies"
+	@echo "make security       Run Bandit static security scanner"
 	@echo "make clean          Remove caches/build artifacts"
 	@echo "make build          Build package"
 	@echo "make makemigrations Generate migrations for keysmith app"
@@ -43,6 +45,13 @@ format:
 
 check: lint test
 
+audit:
+	uv export --no-emit-project --no-hashes --all-extras > /tmp/requirements_audit.txt
+	uvx pip-audit -r /tmp/requirements_audit.txt
+
+security:
+	uvx bandit --ini .bandit -r $(PACKAGE)
+
 build:
 	uv build
 
@@ -57,6 +66,8 @@ migrate:
 
 docs-serve:
 	uv run --extra docs zensical serve
+
+docs-server: docs-serve
 
 docs-build:
 	uv run --extra docs zensical build

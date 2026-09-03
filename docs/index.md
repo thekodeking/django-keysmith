@@ -2,8 +2,7 @@
 
 <p class="ks-lead" markdown>
 
-**Hashed API tokens for Django** - create, rotate, revoke, and audit machine credentials without
-rolling your own key infrastructure.
+**Hashed API key authentication and lifecycle management for Django & DRF.** Issue, rotate, revoke, and audit machine credentials without building your own key infrastructure.
 
 </p>
 
@@ -15,25 +14,43 @@ pip install django-keysmith
 
 <div class="ks-feature" markdown>
 
-**Hashed secrets** PBKDF2-SHA512 at rest. Raw tokens shown once at creation.
+**Hashed Secrets at Rest**
+One-way PBKDF2 or SHA-256 hashing. Secrets are only shown once upon creation and never stored in plain text.
 
 </div>
 
 <div class="ks-feature" markdown>
 
-**Lifecycle API** `create_token`, `rotate_token`, `revoke_token`, `purge_token`.
+**Complete Lifecycle API**
+`create_token`, `rotate_token`, `revoke_token`, and `purge_token` available via Python services, Django Admin, and CLI.
 
 </div>
 
 <div class="ks-feature" markdown>
 
-**Two integrations** Middleware + decorators for Django views. Auth classes for DRF.
+**Django & DRF Native**
+Works seamlessly via Django middleware & decorators or Django REST Framework authentication & permission classes.
 
 </div>
 
 <div class="ks-feature" markdown>
 
-**Scopes** Permission codenames on each token - same primitives as Django auth.
+**High-Performance Debouncing**
+Debounced usage tracking (`last_used_at`) slashes database writes by >95% on read-heavy workloads.
+
+</div>
+
+<div class="ks-feature" markdown>
+
+**Fine-Grained Scopes**
+Leverage Django's standard `auth.Permission` system to enforce endpoint capabilities per token.
+
+</div>
+
+<div class="ks-feature" markdown>
+
+**Built-In Audit Trail**
+Track authentication attempts, IP addresses, client headers, and token lifecycle events automatically.
 
 </div>
 
@@ -41,77 +58,222 @@ pip install django-keysmith
 
 ---
 
-## The problem Keysmith solves
+## In 30 Seconds
 
-Static API keys in environment variables work until they don't. Rotation means redeploying.
-Revocation means grep-and-replace. Audit trails mean building logging yourself.
+Here is how simple it is to protect an API endpoint:
 
-Keysmith treats tokens as first-class database records with explicit lifecycle operations, hashed
-storage, and request-level audit events - so your team spends time on product code, not credential
-plumbing.
+=== "Django REST Framework"
 
----
+    ```python
+    # views.py
+    from rest_framework.views import APIView
+    from rest_framework.response import Response
+    from keysmith.drf.permissions import RequireKeysmithToken
 
-## How a request is authenticated
+    class MetricsView(APIView):
+        permission_classes = [RequireKeysmithToken]
 
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Keysmith
-    participant Database
-    participant View
+        def get(self, request):
+            return Response({
+                "status": "healthy",
+                "token_id": request.auth.prefix,
+                "issued_to": str(request.user),
+            })
+    ```
 
-    Client->>Keysmith: X-KEYSMITH-TOKEN header
-    Keysmith->>Keysmith: Parse format + checksum
-    Keysmith->>Database: Lookup by prefix
-    Keysmith->>Keysmith: Check revoked / expired
-    Keysmith->>Keysmith: Verify hash
-    Keysmith->>View: Attach token to request
-    View->>Client: Response
-    Keysmith->>Database: Audit event
-```
+=== "Standard Django"
 
-One validator (`authenticate_token`) powers both the Django middleware and the DRF authentication
-class. Behavior is identical regardless of how the request enters your app.
+    ```python
+    # views.py
+    from django.http import JsonResponse
+    from keysmith.django.decorator import keysmith_required
 
----
+    @keysmith_required
+    def metrics_view(request):
+        return JsonResponse({
+            "status": "healthy",
+            "token_id": request.keysmith_token.prefix,
+            "issued_to": str(request.keysmith_user),
+        })
+    ```
 
-## Token format
-
-```text
-tok_a1B2c3D4:abcdefghijklmnopqrstuvwxyz012345678901234567890123456789012
-└── prefix ──┘ └──────────── secret (32 chars default) ────────────────┘└ crc ┘
-```
-
-| Part             | Stored in DB? | Purpose                               |
-| ---------------- | ------------- | ------------------------------------- |
-| Prefix (`tok_…`) | Yes, indexed  | Fast lookup                           |
-| Secret           | Hash only     | Verified on each request              |
-| CRC (6 digits)   | No            | Reject malformed tokens before DB hit |
-
----
-
-## Where to start
-
-| I want to…                          | Go to                                        |
-| ----------------------------------- | -------------------------------------------- |
-| Install and run migrations          | [Install](getting-started/install.md)        |
-| Create a token and call an endpoint | [Tutorial](getting-started/tutorial.md)      |
-| Rotate or revoke credentials        | [Tokens](topics/tokens.md)                   |
-| Protect Django views                | [Django integration](integrations/django.md) |
-| Protect DRF endpoints               | [DRF integration](integrations/drf.md)       |
-| Tune expiry, headers, scopes        | [Settings](topics/settings.md)               |
-| Look up a function signature        | [Reference](reference/services.md)           |
-
----
-
-## Requirements
-
-- Python 3.9+
-- Django 4.2+
-- Django REST Framework 3.15.2+ _(optional, for DRF integration)_
+### 1. Issue a token from your terminal
 
 ```bash
-pip install django-keysmith          # Django only
-pip install "django-keysmith[drf]"     # with DRF support
+python manage.py create_token --name "Monitoring Agent" --user deployer
 ```
+
+```text
+Token created successfully!
+--------------------------------------------------------------------------------
+Prefix:     tok_a1B2c3D4
+Secret:     tok_a1B2c3D4:3e8f...c89012 (Save this now - it will not be shown again!)
+Expires At: 2026-12-02 14:30:00 UTC
+--------------------------------------------------------------------------------
+```
+
+### 2. Make an authenticated request
+
+=== "cURL"
+
+    ```bash
+    curl -H "Authorization: Bearer tok_a1B2c3D4:3e8f...c89012" \
+      http://localhost:8000/api/metrics/
+    ```
+
+=== "HTTPie"
+
+    ```bash
+    http http://localhost:8000/api/metrics/ \
+      "Authorization: Bearer tok_a1B2c3D4:3e8f...c89012"
+    ```
+
+=== "Python (HTTPX)"
+
+    ```python
+    import httpx
+
+    headers = {"Authorization": "Bearer tok_a1B2c3D4:3e8f...c89012"}
+    response = httpx.get("http://localhost:8000/api/metrics/", headers=headers)
+    print(response.json())
+    ```
+
+### 3. Response
+
+```json
+{
+  "status": "healthy",
+  "token_id": "tok_a1B2c3D4",
+  "issued_to": "deployer"
+}
+```
+
+---
+
+## The Problem Keysmith Solves
+
+Static API keys hardcoded in `.env` files or application settings work until they don't:
+
+- **Rotation means redeployment**: Updating an API key requires cycling production servers.
+- **Revocation is dangerous**: If a credential leaks on GitHub, revoking it involves messy grep-and-replace deployments.
+- **No visibility**: You can't tell which partner, microservice, or integration called your API, or when a key was last active.
+- **No scoping**: Every key has blanket access to everything.
+
+**Keysmith treats API tokens as first-class database entities with cryptographic safety:**
+- Secrets are hashed at rest using PBKDF2-SHA512 or HMAC-SHA256 (identical to password hashing).
+- Tokens can be issued, rotated, or revoked instantaneously via Django Admin, Python services, or CLI without server restarts.
+- Fast fail-fast checksum validation discards forged keys before querying the database.
+- Audit records log IP addresses, user agents, paths, and status codes for every authentication attempt.
+
+---
+
+## How Authentication Works
+
+Keysmith validates incoming requests through an optimized 4-step pipeline:
+
+```text
+Incoming Request
+      │
+      ▼
+┌──────────────────────────────────────────────────────────────┐
+│ 1. Header Extraction                                         │
+│    Reads Authorization: Bearer <token> (or X-KEYSMITH-TOKEN) │
+└──────────────────────────────┬───────────────────────────────┘
+                               │
+                               ▼
+┌──────────────────────────────────────────────────────────────┐
+│ 2. Fail-Fast Checksum Verification (CRC32)                   │
+│    Validates the 6-character checksum. Invalid tokens fail   │
+│    immediately without touching your database.               │
+└──────────────────────────────┬───────────────────────────────┘
+                               │
+                               ▼
+┌──────────────────────────────────────────────────────────────┐
+│ 3. Indexed DB Lookup & Constant-Time Hash Check              │
+│    Fetches token row by prefix. Verifies state (not revoked, │
+│    not purged, not expired), then constant-time hashes.      │
+└──────────────────────────────┬───────────────────────────────┘
+                               │
+                               ▼
+┌──────────────────────────────────────────────────────────────┐
+│ 4. Request Context & Scope Enforcement                       │
+│    Attaches token & user, debounces last_used_at in DB,      │
+│    and enforces required permission scopes.                  │
+└──────────────────────────────┬───────────────────────────────┘
+                               │
+                               ▼
+                          Your View
+```
+
+!!! info "Unified Architecture"
+    Both standard Django views (via middleware/decorators) and Django REST Framework views (via authentication classes) share the exact same underlying validation engine (`authenticate_token`). Behavior is completely consistent across your codebase.
+
+---
+
+## Token Anatomy
+
+Every Keysmith token contains three distinct components engineered for speed, security, and human readability:
+
+<div class="ks-token-anatomy">
+  <div class="ks-token-pill">
+    <span class="ks-token-part ks-token-part--prefix" title="Prefix (12 chars)">tok_a1B2c3D4</span>
+    <span class="ks-token-part ks-token-part--sep">:</span>
+    <span class="ks-token-part ks-token-part--secret" title="Secret (32 chars)">9aK2mX7pQ1rT4vW8yZ0bC3dF6hJ5nL8s</span>
+    <span class="ks-token-part ks-token-part--crc" title="CRC32 Checksum (6 digits)">481029</span>
+  </div>
+  <div class="ks-token-chips">
+    <span class="ks-token-chip"><span class="ks-token-dot ks-token-dot--prefix"></span> <strong>Prefix</strong> (12 chars) &bull; Indexed DB column</span>
+    <span class="ks-token-chip"><span class="ks-token-dot ks-token-dot--secret"></span> <strong>Secret</strong> (32 chars) &bull; Hashed at rest</span>
+    <span class="ks-token-chip"><span class="ks-token-dot ks-token-dot--crc"></span> <strong>Checksum</strong> (6 digits) &bull; In-memory CRC32</span>
+  </div>
+</div>
+
+| Component | In Database? | Verification Method | Purpose |
+| :--- | :---: | :--- | :--- |
+| **Prefix** (`tok_...`) | **Yes (Indexed)** | Indexed SQL query | Instant lookup key without decrypting credentials. |
+| **Secret** | **Hash only** | Constant-time hash verification | Confidential secret verifying authenticity. |
+| **Checksum** | **No** | In-memory CRC32 validation | Discards malformed/forged keys before hitting DB. |
+
+---
+
+## Where to Next?
+
+<div class="ks-features" markdown>
+
+<div class="ks-feature" markdown>
+
+**[Installation Guide](getting-started/install.md)**
+Set up dependencies, register the app, run migrations, and verify your installation.
+
+</div>
+
+<div class="ks-feature" markdown>
+
+**[Step-by-Step Tutorial](getting-started/tutorial.md)**
+Walk through an end-to-end guide creating tokens, protecting views, and testing responses.
+
+</div>
+
+<div class="ks-feature" markdown>
+
+**[Django REST Framework](integrations/drf.md)**
+Configure DRF authentication, permissions, and token rate throttling.
+
+</div>
+
+<div class="ks-feature" markdown>
+
+**[CLI Commands](reference/commands.md)**
+Learn how to create, list, and revoke tokens from CI/CD scripts or terminal.
+
+</div>
+
+</div>
+
+---
+
+## Compatibility
+
+- **Python**: `>= 3.10` (Python 3.10, 3.11, 3.12, 3.13)
+- **Django**: `4.2 LTS`, `5.1`, `5.2 LTS` (`>= 4.2, < 6.0`)
+- **Django REST Framework**: `>= 3.15` *(optional)*

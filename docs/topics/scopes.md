@@ -1,133 +1,154 @@
-# Scopes
+# Scopes & Permissions
 
-Scopes control authorization - what an authenticated token is allowed to do. They are Django `Permission` codenames attached to each token via a many-to-many relationship.
-
-Authentication answers *who* (or *which credential*). Scopes answer *what it may do*.
+Restrict what each token can do by assigning fine-grained permission scopes.
 
 ---
 
-## Assigning scopes
+## Why Use Scopes?
 
-Pass `Permission` instances when creating a token:
+Not all API clients need full access to your API:
 
-```python
-from django.contrib.auth.models import Permission
-from keysmith.services.tokens import create_token
+- A **Read-Only Dashboard** needs `reports.view_analytics`.
+- A **Billing Webhook** needs `invoices.change_invoice`.
+- A **Monitoring Agent** only needs `health.view_metrics`.
 
-write = Permission.objects.get(codename="add_post")
+Instead of inventing a custom permission system, **Keysmith reuses Django's standard `django.contrib.auth.models.Permission` model**. This means your tokens, human users, and Django Admin all speak the exact same permission language!
 
-token, raw = create_token(name="writer", user=user, scopes=[write])
-```
+---
 
-When `scopes` is omitted, `DEFAULT_SCOPES` from settings is applied automatically.
+## 1. Configuring Scopes
 
-### Codename formats
-
-At creation time, scopes accept two formats:
-
-| Format | Example | When to use |
-| --- | --- | --- |
-| Bare codename | `"write"` | Single app, no collisions |
-| Qualified | `"myapp.can_write"` | Multiple apps sharing codenames |
-
-Configure an allowlist to prevent over-permissioning:
+In your `settings.py`, register the permission codenames available for token issuance:
 
 ```python
+# settings.py
+
 KEYSMITH = {
-    "AVAILABLE_SCOPES": ["read", "write", "admin"],
-    "DEFAULT_SCOPES": ["read"],
+    # All scopes that can be granted to tokens:
+    "AVAILABLE_SCOPES": [
+        "orders.view_order",
+        "orders.add_order",
+        "orders.change_order",
+        "reports.view_analytics",
+    ],
+    # Default scopes automatically assigned if none are specified:
+    "DEFAULT_SCOPES": [
+        "orders.view_order",
+    ],
 }
 ```
 
-Keysmith rejects any scope outside `AVAILABLE_SCOPES` at token creation.
-
-!!! note "Runtime checks use codenames only"
-    Scope enforcement at request time compares **permission codenames**, not `app_label.codename` qualifiers. Use distinct codenames across apps, or ensure codenames are unique within your permission set.
+Format is `<app_label>.<permission_codename>`.
 
 ---
 
-## Enforcing scopes
+## 2. Issuing Scoped Tokens
 
-=== "Django"
+=== "CLI"
+
+    Pass comma-separated codenames to the `--scopes` flag:
+
+    ```bash
+    python manage.py create_token \
+      --name "Order Sync Worker" \
+      --scopes "orders.view_order,orders.add_order"
+    ```
+
+=== "Python"
+
+    Pass a list of `Permission` objects or string codenames:
 
     ```python
-    from keysmith.django.decorator import keysmith_required
-    from keysmith.django.permissions import keysmith_scopes
+    from keysmith.services.tokens import create_token
 
+    token, raw = create_token(
+        name="Order Sync Worker",
+        scopes=["orders.view_order", "orders.add_order"],
+    )
+    ```
+
+=== "Django Admin"
+
+    When creating or editing a token in the Django Admin, select the desired scopes from the filter horizontal widget.
+
+---
+
+## 3. Enforcing Scopes on Views
+
+### In Django REST Framework (DRF)
+
+Use the `HasTokenScope` permission class:
+
+```python
+# views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from keysmith.drf.permissions import RequireKeysmithToken, HasTokenScope
+
+class CreateOrderView(APIView):
+    # Requires valid token AND the 'orders.add_order' scope
+    permission_classes = [RequireKeysmithToken, HasTokenScope]
+    required_scopes = ["orders.add_order"]
+
+    def post(self, request):
+        return Response({"status": "order created"})
+```
+
+### In Standard Django Views
+
+Use the `@require_scopes` decorator:
+
+```python
+# views.py
+from django.http import JsonResponse
+from keysmith.django.decorator import keysmith_required, require_scopes
+
+@keysmith_required
+@require_scopes("orders.add_order")
+def create_order(request):
+    return JsonResponse({"status": "order created"})
+```
+
+If a token is authenticated but lacks the required scope, Keysmith returns:
+
+```http
+HTTP/1.1 403 Forbidden
+Content-Type: application/json
+
+{
+  "detail": "Token does not have required scope: orders.add_order"
+}
+```
+
+---
+
+## Inspecting Scopes at Runtime
+
+You can inspect a token's scopes directly inside your views:
+
+=== "DRF"
+
+    ```python
+    class OrderView(APIView):
+        def get(self, request):
+            token = request.auth
+            
+            # Check a specific scope:
+            can_delete = token.has_scope("orders.delete_order")
+            
+            # List all assigned scopes:
+            all_scopes = [f"{s.content_type.app_label}.{s.codename}" for s in token.scopes.all()]
+            
+            return Response({"can_delete": can_delete, "scopes": all_scopes})
+    ```
+
+=== "Standard Django"
+
+    ```python
     @keysmith_required
-    @keysmith_scopes("write")
-    def create_post(request):
-        ...
+    def order_view(request):
+        token = request.keysmith_token
+        
+        can_delete = token.has_scope("orders.delete_order")
+        return JsonResponse({"can_delete": can_delete})
     ```
-
-    | Outcome | HTTP status |
-    | --- | --- |
-    | No token | 401 |
-    | Token missing scope | 403 (`PermissionDenied`) |
-
-=== "DRF"
-
-    ```python
-    from keysmith.drf.permissions import RequireKeysmithToken, ScopedPermission
-
-    class PostView(APIView):
-        permission_classes = [RequireKeysmithToken, ScopedPermission("write")]
-    ```
-
-    `ScopedPermission("read", "write")` requires **all** listed scopes (AND logic).
-
-    For reusable classes:
-
-    ```python
-    from keysmith.drf.permissions import HasKeysmithScopes
-
-    class RequireWrite(HasKeysmithScopes):
-        required_scopes = {"write"}
-    ```
-
-    Or declare scopes on the view:
-
-    ```python
-    class PostView(APIView):
-        permission_classes = [RequireKeysmithToken, HasKeysmithScopes]
-        required_scopes = {"write"}
-    ```
-
-Always require authentication (`@keysmith_required` or `RequireKeysmithToken`) **before** scope checks.
-
----
-
-## Debugging
-
-Inspect a token's scopes in a view:
-
-=== "Django"
-
-    ```python
-    codenames = set(
-        request.keysmith_token.scopes.values_list("codename", flat=True)
-    )
-    ```
-
-=== "DRF"
-
-    ```python
-    codenames = set(
-        request.auth.scopes.values_list("codename", flat=True)
-    )
-    ```
-
----
-
-## Design guidance
-
-| Practice | Rationale |
-| --- | --- |
-| Action-oriented names (`read`, `write`) | Easy to reason about |
-| Least privilege defaults | Empty `DEFAULT_SCOPES`, assign explicitly |
-| One token per client/system | Limits blast radius on compromise |
-| `AVAILABLE_SCOPES` in production | Prevents accidental scope escalation |
-
----
-
-**See also:** [Settings - scopes](settings.md#scopes) · [Permissions reference](../reference/permissions.md)

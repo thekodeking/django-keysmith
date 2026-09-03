@@ -1,132 +1,148 @@
-# Authentication
+# Authentication Pipeline & Performance
 
-Keysmith validates a raw token string and attaches the result to the request. One function - `authenticate_token` - does all the work. Middleware and DRF are thin wrappers around it.
-
----
-
-## The validation pipeline
-
-```
-Header / query param
-        │
-        ▼
-  Parse + CRC check ──── InvalidToken (malformed)
-        │
-        ▼
-  Lookup by prefix ───── InvalidToken (not found)
-        │
-        ▼
-  Lifecycle checks ───── RevokedToken / ExpiredToken
-        │
-        ▼
-  Hash verify ────────── InvalidToken (wrong secret)
-        │
-        ▼
-  Update last_used_at
-        │
-        ▼
-  Return Token instance
-```
-
-Steps run inside a database transaction with `select_for_update` on the token row.
+Learn how Keysmith processes credentials, prevents timing attacks, and minimizes database load.
 
 ---
 
-## Where tokens are read from
+## The Authentication Pipeline
 
-By default, clients send:
-
-```http
-X-KEYSMITH-TOKEN: tok_a1B2c3D4:secret...crc
-```
-
-Django exposes this as `request.META["HTTP_X_KEYSMITH_TOKEN"]`.
-
-| Setting | Default | Effect |
-| --- | --- | --- |
-| `HEADER_NAME` | `HTTP_X_KEYSMITH_TOKEN` | Which `META` key to read |
-| `ALLOW_QUERY_PARAM` | `False` | Also accept `?keysmith_token=…` |
-| `QUERY_PARAM_NAME` | `keysmith_token` | Query parameter name |
-
-!!! warning
-    Query-string tokens appear in access logs and browser history. Keep `ALLOW_QUERY_PARAM` disabled in production unless you have no alternative.
-
----
-
-## Integration points
-
-### Middleware (Django views)
-
-Runs on every request. Sets three attributes:
-
-```python
-request.keysmith_token      # Token or None
-request.keysmith_user       # token.user or None
-request.keysmith_auth_error # TokenAuthError subclass or None
-```
-
-Middleware never returns 401. Views enforce authentication with `@keysmith_required`.
-
-After the response, middleware writes `auth_success` or `auth_failed` audit events - but only for views decorated with `@keysmith_required`.
-
-### DRF authentication class
-
-`KeysmithAuthentication` plugs into DRF's auth flow:
-
-- `request.auth` → the `Token` instance
-- `request.user` → `token.user`, or DRF's unauthenticated user placeholder when no user is linked
-
-Missing token → returns `None` (DRF continues to other auth classes).
-`TokenAuthError` → raises `AuthenticationFailed` with the configured `invalid_token` message.
-
-When both middleware and DRF are active, DRF sets `_keysmith_skip_middleware_audit` to prevent duplicate audit rows.
-
----
-
-## Exceptions
+When an API request arrives, Keysmith executes a high-speed, non-locking authentication sequence:
 
 ```text
-TokenAuthError
-├── InvalidToken    malformed, missing, unknown prefix, hash mismatch
-├── RevokedToken    revoked=True or purged=True
-└── ExpiredToken    past expires_at
-```
-
-Use these for **internal** logging. External clients should always see a generic error - see [Security](../extending/security.md#error-disclosure).
-
-### Direct usage
-
-```python
-from keysmith.auth.base import authenticate_token
-from keysmith.auth.exceptions import InvalidToken, ExpiredToken, RevokedToken
-
-try:
-    token = authenticate_token(raw_token)
-except (InvalidToken, ExpiredToken, RevokedToken) as exc:
-    log_internally(exc)
-    return generic_401()
+Request arrives with Authorization header
+                  │
+                  ▼
+         [ 1. Extract Token ]
+  Extracts from Authorization: Bearer <token>
+  or configured custom header (X-KEYSMITH-TOKEN)
+                  │
+                  ▼
+       [ 2. Verify CRC Checksum ]
+  Calculates CRC32 checksum in memory.
+  If invalid ──► Immediately returns 401 Unauthorized (No DB hit!)
+                  │
+                  ▼
+       [ 3. Database Lookup by Prefix ]
+  Indexed select_related("user") and prefetch_related("scopes").
+  If token row not found ──► Returns 401 (InvalidToken)
+                  │
+                  ▼
+       [ 4. Status & Expiration Check ]
+  Checks revoked == True, purged == True, or expires_at < now.
+  If failed ──► Returns 401 (RevokedToken / ExpiredToken)
+                  │
+                  ▼
+       [ 5. Constant-Time Hash Verification ]
+  Runs hasher.verify(secret, token.key).
+  Timing-safe comparison prevents side-channel attacks.
+                  │
+                  ▼
+       [ 6. Debounced Usage Tracking ]
+  Checks LAST_USED_UPDATE_INTERVAL threshold.
+  Updates last_used_at in DB only if needed.
+                  │
+                  ▼
+          View Execution
 ```
 
 ---
 
-## Rate limiting
+## Sending Credentials
 
-`RATE_LIMIT_HOOK` runs in middleware **before** `authenticate_token`:
+### 1. Standard `Authorization` Header *(Recommended)*
+
+Clients can supply credentials using standard HTTP authorization headers:
+
+```http
+Authorization: Bearer tok_a1B2c3D4:3e8f...c89012
+```
+
+Or using the `Token` keyword:
+
+```http
+Authorization: Token tok_a1B2c3D4:3e8f...c89012
+```
+
+### 2. Custom Header
+
+Alternatively, clients can provide the token in the header configured by `HEADER_NAME` (default: `X-KEYSMITH-TOKEN`):
+
+```http
+X-KEYSMITH-TOKEN: tok_a1B2c3D4:3e8f...c89012
+```
+
+### 3. Query Parameter *(Optional)*
+
+If you are building webhook endpoints where clients cannot modify headers, you can enable query string tokens in `settings.py`:
 
 ```python
 KEYSMITH = {
-    "RATE_LIMIT_HOOK": "myapp.hooks.rate_limit",
+    "ALLOW_QUERY_PARAM": True,
+    "QUERY_PARAM_NAME": "api_key",
 }
 ```
 
-```python
-def rate_limit(request, raw_token=None):
-    if too_many_attempts(request):
-        raise RateLimitExceeded()
+```http
+GET /api/webhook/?api_key=tok_a1B2c3D4:3e8f...c89012
 ```
 
-`DRF_THROTTLE_HOOK` runs **after** successful DRF authentication. It can raise DRF's `Throttled` exception.
+!!! warning "Query Parameter Security"
+    URLs are frequently stored in server logs, browser histories, and proxy logs. Avoid query parameter tokens unless strictly necessary for third-party webhook integrations.
 
 ---
 
-**See also:** [Django integration](../integrations/django.md) · [DRF integration](../integrations/drf.md) · [Authentication reference](../reference/authentication.md)
+## High-Performance Optimizations
+
+Keysmith is built for high-throughput production workloads:
+
+### 1. In-Memory Checksum (Fail-Fast)
+
+Every valid token ends with a 6-character CRC checksum calculated over its prefix and secret.
+
+If an attacker scans your API with random strings, Keysmith's CRC check detects the forgery in **microseconds** without performing a database lookup. Your database connections remain available for legitimate users.
+
+### 2. Debounced Usage Tracking (`LAST_USED_UPDATE_INTERVAL`)
+
+Updating `token.last_used_at` on every single HTTP request causes severe database write amplification and connection pool saturation under heavy traffic.
+
+Keysmith includes intelligent write debouncing configured via `LAST_USED_UPDATE_INTERVAL` (default: `60` seconds):
+
+```python
+KEYSMITH = {
+    # Only update last_used_at in the database once every 60 seconds per token
+    "LAST_USED_UPDATE_INTERVAL": 60,
+}
+```
+
+- If a token handles **10,000 requests per minute**, Keysmith writes to the database **exactly once** instead of 10,000 times!
+- The in-memory token instance in your request handler always reflects the latest activity.
+
+### 3. Elimination of Row Locks (`select_for_update`)
+
+Older token systems wrap authentication in `select_for_update` database transactions, creating database deadlocks when multiple parallel requests use the same token.
+
+Keysmith performs standard non-locking reads using `select_related("user")` and `prefetch_related("scopes")`, ensuring zero row contention under concurrent load.
+
+---
+
+## Error Handling & RFC 9110 Compliance
+
+When an authentication check fails, Keysmith responds with an RFC 9110 compliant challenge:
+
+```http
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: Bearer realm="api"
+Content-Type: application/json
+
+{
+  "detail": "This token has expired. Please rotate or request a new token."
+}
+```
+
+Specific error exceptions raised:
+
+| Exception | Condition | Message |
+| :--- | :--- | :--- |
+| `InvalidToken` | Checksum failed, missing token, or prefix not in database | *"Invalid token format or token does not exist."* |
+| `RevokedToken` | `token.revoked == True` or `token.purged == True` | *"This token has been revoked."* |
+| `ExpiredToken` | `token.expires_at < timezone.now()` | *"This token has expired. Please rotate or request a new token."* |

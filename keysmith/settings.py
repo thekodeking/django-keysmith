@@ -2,13 +2,17 @@ from django.conf import settings
 from django.core.signals import setting_changed
 from django.utils.translation import gettext_lazy as _
 
+DEFAULT_TOKEN_MODEL = "keysmith.Token"  # nosec B105
+DEFAULT_TOKEN_PREFIX = "tok"  # nosec B105
+DEFAULT_TOKEN_SECRET_LENGTH = 32  # nosec B105
+
 KEYSMITH_DEFAULTS = {
     "HASH_BACKEND": "keysmith.hashers.PBKDF2SHA512TokenHasher",
     "HASH_ITERATIONS": 100_000,
     "DEFAULT_EXPIRY_DAYS": 90,
     "AVAILABLE_SCOPES": [],
     "DEFAULT_SCOPES": [],
-    "TOKEN_MODEL": "keysmith.Token",
+    "TOKEN_MODEL": DEFAULT_TOKEN_MODEL,
     "HEADER_NAME": "HTTP_X_KEYSMITH_TOKEN",
     "ALLOW_QUERY_PARAM": False,
     "QUERY_PARAM_NAME": "keysmith_token",
@@ -17,8 +21,13 @@ KEYSMITH_DEFAULTS = {
     "AUDIT_LOG_HOOK": None,
     "AUDIT_LOG_RETENTION_DAYS": None,
     "TRUST_PROXIES": False,
-    "TOKEN_PREFIX": "tok",
-    "TOKEN_SECRET_LENGTH": 32,
+    "CLIENT_IP_HEADER": None,  # Optional header for client IP (e.g. "HTTP_X_REAL_IP", "HTTP_CF_CONNECTING_IP")
+    "CLIENT_IP_HOOK": None,  # Optional callable or dotted string: hook(request) -> str | None
+    "LAST_USED_UPDATE_INTERVAL": 60,  # Minimum seconds between last_used_at DB updates (0 = every request)
+    "AUTH_HEADER_TYPES": ("Bearer", "Token"),  # Supported auth header schemes in Authorization header
+    "WWW_AUTHENTICATE_SCHEME": "Bearer",  # Auth scheme in WWW-Authenticate header per RFC 9110
+    "TOKEN_PREFIX": DEFAULT_TOKEN_PREFIX,
+    "TOKEN_SECRET_LENGTH": DEFAULT_TOKEN_SECRET_LENGTH,
     "RATE_LIMIT_HOOK": None,  # Optional dotted callable: hook(request, raw_token=None)
     "DRF_THROTTLE_HOOK": None,  # Optional dotted callable: hook(request, token=None)
     "DEFAULT_ERROR_MESSAGES": {

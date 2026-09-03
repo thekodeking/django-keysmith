@@ -7,4 +7,6 @@ def load_hook(setting_name: str):
     hook_path = getattr(keysmith_settings, setting_name, None)
     if not hook_path:
         return None
+    if callable(hook_path):
+        return hook_path
     return import_string(hook_path)
