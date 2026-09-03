@@ -3,7 +3,7 @@ name = "django-keysmith"
 version = "0.1.2"
 description = "A django application for API key management with rest-framework support"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "thekodeking", email = "nkrishnaraj.developer@gmail.com" }]
@@ -24,7 +24,6 @@ classifiers = [
 
   "Framework :: Django",
   "Framework :: Django :: 4.2",
-  "Framework :: Django :: 5.0",
   "Framework :: Django :: 5.1",
   "Framework :: Django :: 5.2",
 
@@ -33,7 +32,6 @@ classifiers = [
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -43,7 +41,7 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
-dependencies = ["django>=4.2.28,<6.0"]
+dependencies = ["django>=4.2,<6.0"]
 
 [project.urls]
 Homepage = "https://github.com/thekodeking/django-keysmith"
@@ -52,7 +50,7 @@ Repository = "https://github.com/thekodeking/django-keysmith"
 Documentation = "https://thekodeking.github.io/django-keysmith/"
 
 [project.optional-dependencies]
-drf = ["djangorestframework>=3.15.2"]
+drf = ["djangorestframework>=3.15"]
 docs = ["zensical"]
 dev = [
   "black>=22.3.0",
@@ -71,20 +69,22 @@ requires = ["uv-build>=0.10.0,<0.11.0"]
 build-backend = "uv_build"
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 line-length = 100
-fix = true
+
+[tool.ruff.lint]
+fixable = ["ALL"]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["keysmith"]
+combine-as-imports = true
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
-
-[tool.ruff.isort]
-known-first-party = ["keysmith"]
-combine-as-imports = true
 
 [tool.uv.build-backend]
 module-name = "keysmith"
